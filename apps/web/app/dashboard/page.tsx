@@ -2,16 +2,21 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import type { DashboardSummary } from '@account/shared';
+import type { DashboardSummary } from '../../lib/api';
 
-function Card({ title, value, hint }: { title: string; value: string; hint?: string }) {
+function Card({ title, value, hint, accent }: { title: string; value: string; hint?: string; accent?: 'good' | 'warn' | 'bad' }) {
+  const ring = accent === 'good' ? 'ring-emerald-100' : accent === 'warn' ? 'ring-amber-100' : accent === 'bad' ? 'ring-rose-100' : '';
   return (
-    <div className="rounded-lg border bg-white p-4 shadow-sm">
-      <div className="text-xs uppercase text-slate-500">{title}</div>
-      <div className="mt-2 text-2xl font-semibold">{value}</div>
-      {hint && <div className="text-xs text-slate-400">{hint}</div>}
+    <div className={`rounded-lg border bg-white p-4 shadow-sm ring-1 ${ring}`}>
+      <div className="text-xs uppercase tracking-wide text-slate-500">{title}</div>
+      <div className="mt-2 text-2xl font-semibold tabular-nums">{value}</div>
+      {hint && <div className="mt-1 text-xs text-slate-400">{hint}</div>}
     </div>
   );
+}
+
+function fmt(n: number): string {
+  return (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR', maximumFractionDigits: 0 });
 }
 
 export default function DashboardPage() {
@@ -20,55 +25,115 @@ export default function DashboardPage() {
     queryFn: () => api.dashboard(),
   });
 
-  if (isLoading) return <p>Loading dashboard…</p>;
-  if (error) return <p className="text-red-600">Failed to load: {(error as Error).message}</p>;
+  if (isLoading) return <p className="p-8 text-slate-500">Loading dashboard…</p>;
+  if (error) return <p className="p-8 text-red-600">Failed to load: {(error as Error).message}</p>;
   const d = data as DashboardSummary;
-
-  const fmt = (n: number) =>
-    n.toLocaleString(undefined, { style: 'currency', currency: 'MYR' });
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card title="Cash Position" value={fmt(d.cashPosition)} />
-        <Card title="AR Outstanding" value={fmt(d.arOutstanding)} />
-        <Card title="AP Outstanding" value={fmt(d.apOutstanding)} />
-        <Card title="Revenue (MTD)" value={fmt(d.revenueMtd)} />
-        <Card title="Expenses (MTD)" value={fmt(d.expenseMtd)} />
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-slate-500">Real-time view of your financials.</p>
+        </div>
+        <a href="/reports" className="text-sm text-brand-700 hover:underline">View full reports →</a>
       </div>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <Card title="Cash" value={fmt(d.cashPosition)} accent={d.cashPosition >= 0 ? 'good' : 'bad'} hint="MYR" />
+        <Card title="AR Outstanding" value={fmt(d.arOutstanding)} accent={d.arOutstanding > 50000 ? 'warn' : 'good'} />
+        <Card title="AP Outstanding" value={fmt(d.apOutstanding)} />
+        <Card title="Inventory" value={fmt(d.inventoryValue)} hint="at cost" />
+        <Card title="Revenue MTD" value={fmt(d.revenueMtd)} accent="good" />
+        <Card title="Expenses MTD" value={fmt(d.expenseMtd)} accent="warn" />
+      </div>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Top Customers</h2>
+          <h2 className="mb-3 text-base font-semibold">Top Customers (by outstanding)</h2>
           <table className="w-full text-sm">
             <thead className="text-left text-slate-500">
-              <tr><th className="py-2">Customer</th><th>Outstanding</th></tr>
+              <tr><th className="py-2">Customer</th><th className="text-right">Outstanding</th></tr>
             </thead>
             <tbody>
+              {d.topCustomers.length === 0 && (
+                <tr><td colSpan={2} className="py-3 text-slate-400">No customers yet.</td></tr>
+              )}
               {d.topCustomers.map((c) => (
                 <tr key={c.customerId} className="border-t">
                   <td className="py-2">{c.name}</td>
-                  <td>{fmt(c.balance)}</td>
+                  <td className="text-right tabular-nums">{fmt(c.balance)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         <div className="rounded-lg border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Top Items (On Hand)</h2>
+          <h2 className="mb-3 text-base font-semibold">Low Stock Items</h2>
           <table className="w-full text-sm">
             <thead className="text-left text-slate-500">
-              <tr><th className="py-2">Item</th><th>Qty</th></tr>
+              <tr><th className="py-2">Item</th><th className="text-right">On Hand</th><th className="text-right">Reorder At</th></tr>
             </thead>
             <tbody>
+              {d.topItems.length === 0 && (
+                <tr><td colSpan={3} className="py-3 text-slate-400">All items above reorder level.</td></tr>
+              )}
               {d.topItems.map((i) => (
                 <tr key={i.itemId} className="border-t">
                   <td className="py-2">{i.name}</td>
-                  <td>{i.soldQty}</td>
+                  <td className="text-right tabular-nums">{i.onHand}</td>
+                  <td className="text-right tabular-nums text-slate-500">{i.reorderLevel}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-base font-semibold">Recent Invoices</h2>
+          <table className="w-full text-sm">
+            <thead className="text-left text-slate-500">
+              <tr>
+                <th className="py-2">Number</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th className="text-right">Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.recentInvoices.length === 0 && (
+                <tr><td colSpan={5} className="py-3 text-slate-400">No invoices yet — create one in Sales.</td></tr>
+              )}
+              {d.recentInvoices.map((i) => (
+                <tr key={i.id} className="border-t">
+                  <td className="py-2">
+                    <a href={`/receivables/${i.id}`} className="text-brand-700 hover:underline">{i.number}</a>
+                  </td>
+                  <td>{i.customerName}</td>
+                  <td className="text-slate-500">{i.date}</td>
+                  <td className="text-right tabular-nums">{fmt(i.total)}</td>
+                  <td>
+                    <span className={`rounded px-2 py-0.5 text-xs ${i.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
+                      {i.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-base font-semibold">MyInvois Status</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Card title="Pending Submissions" value={String(d.einvoicePending ?? 0)} accent={d.einvoicePending ? 'warn' : 'good'} />
+            <Card title="Valid Documents" value={String(d.einvoiceValid ?? 0)} accent="good" />
+          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            LHDNM e-invoice integration. Submit invoices from the receivables page or via the e-Invoice module.
+          </p>
         </div>
       </div>
     </div>

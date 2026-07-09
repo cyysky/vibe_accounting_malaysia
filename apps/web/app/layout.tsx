@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import './globals.css';
 import { Providers } from '../components/providers';
-import { Sidebar } from '../components/sidebar';
-import { Topbar } from '../components/topbar';
+import { ProtectedShell } from '../components/ProtectedShell';
 
 export const metadata: Metadata = {
   title: 'Vibe Accounting Malaysia',
@@ -12,16 +11,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className="h-full">
+      <body className="h-full bg-slate-50 text-slate-900 antialiased">
         <Providers>
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex flex-1 flex-col">
-              <Topbar />
-              <main className="flex-1 p-6">{children}</main>
-            </div>
-          </div>
+          <ProtectedShell>{children}</ProtectedShell>
         </Providers>
       </body>
     </html>

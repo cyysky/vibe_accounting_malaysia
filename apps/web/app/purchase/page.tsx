@@ -1,41 +1,116 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import type { PurchaseOrder } from './purchase.types';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Plus } from 'lucide-react';
+import { api, type Supplier } from '../../lib/api';
+import { Button } from '../../components/ui/Button';
+import { DataTable } from '../../components/ui/DataTable';
+import { Modal } from '../../components/ui/Modal';
+import { Field, Input, Select } from '../../components/ui/Form';
+
+const fmt = (n: number) => (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR' });
+
+const schema = z.object({
+  supplierId: z.string().min(1, 'Required'),
+  date: z.string().min(1, 'Required'),
+  total: z.coerce.number().min(0).default(0),
+  notes: z.string().optional(),
+});
+type Form = z.infer<typeof schema>;
 
 export default function PurchasePage() {
-  const { data, isLoading } = useQuery<PurchaseOrder[]>({
-    queryKey: ['purchase-orders'],
-    queryFn: () => fetch('http://localhost:3001/api/purchase/orders', {
-      headers: { Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') ?? '' : ''}` },
-    }).then((r) => r.json()),
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const orders = useQuery({ queryKey: ['purchase-orders'], queryFn: () => api.purchaseOrders() });
+  const suppliers = useQuery({ queryKey: ['suppliers'], queryFn: () => api.suppliers() });
+
+  const create = useMutation({
+    mutationFn: (data: Form) => api.createPurchaseOrder(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['purchase-orders'] });
+      setShowForm(false);
+    },
   });
-  if (isLoading) return <p>Loading…</p>;
-  const fmt = (n: number) => n.toLocaleString(undefined, { style: 'currency', currency: 'MYR' });
+
+  const form = useForm<Form>({
+    resolver: zodResolver(schema),
+    defaultValues: { supplierId: '', date: today, total: 0, notes: '' },
+  });
+
+  function openCreate() {
+    form.reset({ supplierId: '', date: today, total: 0, notes: '' });
+    setShowForm(true);
+  }
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Purchase Orders</h1>
-      <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-500">
-            <tr><th className="px-4 py-2">Number</th><th>Supplier</th><th>Date</th><th className="text-right">Total</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            {(data ?? []).map((o) => (
-              <tr key={o.id} className="border-t">
-                <td className="px-4 py-2 font-mono">{o.number}</td>
-                <td>{o.supplierName}</td>
-                <td>{o.date}</td>
-                <td className="text-right">{fmt(o.total)}</td>
-                <td>{o.status}</td>
-              </tr>
-            ))}
-            {(data ?? []).length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">No purchase orders yet</td></tr>
-            )}
-          </tbody>
-        </table>
+    <div className="space-y-6">
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Purchase Orders</h1>
+          <p className="text-sm text-slate-500">Confirmed supplier orders before billing.</p>
+        </div>
+        <Button onClick={openCreate}>
+          <Plus className="h-4 w-4" /> New Purchase Order
+        </Button>
       </div>
+
+      <DataTable
+        data={orders.data?.data ?? []}
+        loading={orders.isLoading}
+        rowKey={(o) => o.id}
+        empty="No purchase orders yet."
+        columns={[
+          { key: 'number', header: 'Number', render: (o) => <span className="font-mono text-xs">{o.number}</span> },
+          { key: 'supplier', header: 'Supplier', render: (o) => o.supplierName },
+          { key: 'date', header: 'Date', render: (o) => o.date },
+          { key: 'total', header: 'Total', align: 'right', render: (o) => fmt(o.total) },
+          { key: 'status', header: 'Status' },
+        ]}
+      />
+
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="New Purchase Order"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
+            <Button loading={create.isPending} onClick={form.handleSubmit((d) => create.mutate(d))}>
+              Create
+            </Button>
+          </>
+        }
+      >
+        <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={form.handleSubmit((d) => create.mutate(d))}>
+          <Field label="Supplier" required>
+            <Select {...form.register('supplierId')}>
+              <option value="">Select supplier…</option>
+              {(suppliers.data ?? []).map((s: Supplier) => (
+                <option key={s.id} value={s.id}>
+                  {s.code} — {s.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Date" required>
+            <Input type="date" {...form.register('date')} />
+          </Field>
+          <Field label="Total">
+            <Input type="number" step="0.01" {...form.register('total', { valueAsNumber: true })} />
+          </Field>
+          <Field label="Notes" className="md:col-span-2">
+            <Input {...form.register('notes')} />
+          </Field>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { ReactNode } from 'react';
 export interface Column<T> {
   key: string;
   header: ReactNode;
-  render: (row: T) => ReactNode;
+  render?: (row: T) => ReactNode;
   align?: 'left' | 'right' | 'center';
   width?: string;
   className?: string;
@@ -21,7 +21,7 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
 }
 
-export function DataTable<T>({ data, columns, rowKey, empty, loading, onRowClick }: DataTableProps<T>) {
+export function DataTable<T extends Record<string, unknown>>({ data, columns, rowKey, empty, loading, onRowClick }: DataTableProps<T>) {
   return (
     <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
       <table className="w-full text-sm">
@@ -71,7 +71,7 @@ export function DataTable<T>({ data, columns, rowKey, empty, loading, onRowClick
                     key={c.key}
                     className={clsx('px-4 py-3', c.align === 'right' && 'text-right tabular-nums', c.align === 'center' && 'text-center', c.className)}
                   >
-                    {c.render(row)}
+                    {c.render ? c.render(row) : (row[c.key] as ReactNode)}
                   </td>
                 ))}
               </tr>

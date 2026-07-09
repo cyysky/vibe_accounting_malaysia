@@ -113,7 +113,7 @@ export default function ReceivablesPage() {
             { key: 'code', header: 'Code', render: (c) => <span className="font-mono text-xs">{c.code}</span> },
             { key: 'name', header: 'Name', render: (c) => <span className="font-medium">{c.name}</span> },
             { key: 'taxId', header: 'TIN', render: (c) => c.taxId ?? '—' },
-            { key: 'currency', header: 'Currency' },
+            { key: 'currency', header: 'Currency', render: (c) => c.currency },
             { key: 'creditLimit', header: 'Credit Limit', align: 'right', render: (c) => fmt(c.creditLimit) },
             { key: 'outstanding', header: 'Outstanding', align: 'right', render: (c) => fmt(c.outstanding) },
             {

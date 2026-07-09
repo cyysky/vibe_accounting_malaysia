@@ -89,7 +89,7 @@ export default function EinvoiceConfigPage() {
             render: (c: EinvoiceConfig) => <Badge tone={c.environment === 'PRODUCTION' ? 'danger' : 'info'}>{c.environment}</Badge>,
           },
           { key: 'client', header: 'Client ID', render: (c) => <span className="font-mono text-xs">{c.clientId}</span> },
-          { key: 'tin', header: 'Taxpayer TIN' },
+          { key: 'tin', header: 'Taxpayer TIN', render: (c) => c.taxpayerTin },
           { key: 'brn', header: 'BRN', render: (c) => c.taxpayerBrn ?? '—' },
           { key: 'cert', header: 'Cert Path', render: (c) => c.certPath ?? '—' },
           {

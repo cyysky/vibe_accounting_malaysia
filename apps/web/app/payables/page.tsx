@@ -104,7 +104,7 @@ export default function PayablesPage() {
             { key: 'code', header: 'Code', render: (s) => <span className="font-mono text-xs">{s.code}</span> },
             { key: 'name', header: 'Name', render: (s) => <span className="font-medium">{s.name}</span> },
             { key: 'taxId', header: 'TIN', render: (s) => s.taxId ?? '—' },
-            { key: 'currency', header: 'Currency' },
+            { key: 'currency', header: 'Currency', render: (s) => s.currency },
             { key: 'outstanding', header: 'Outstanding', align: 'right', render: (s) => fmt(s.outstanding) },
             {
               key: 'active',

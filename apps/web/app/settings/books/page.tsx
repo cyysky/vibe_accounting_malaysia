@@ -57,9 +57,9 @@ export default function AccountBooksPage() {
         columns={[
           { key: 'code', header: 'Code', render: (b) => <span className="font-mono text-xs">{b.code}</span> },
           { key: 'name', header: 'Name', render: (b) => <span className="font-medium">{b.name}</span> },
-          { key: 'base', header: 'Base Currency' },
-          { key: 'tin', header: 'TIN' },
-          { key: 'brn', header: 'BRN' },
+          { key: 'base', header: 'Base Currency', render: (b) => b.baseCurrency },
+          { key: 'tin', header: 'TIN', render: (b) => b.tin ?? '—' },
+          { key: 'brn', header: 'BRN', render: (b) => b.brn ?? '—' },
           {
             key: 'active',
             header: 'Status',

@@ -102,7 +102,7 @@ export default function StockPage() {
         columns={[
           { key: 'code', header: 'Code', render: (i) => <span className="font-mono text-xs">{i.code}</span> },
           { key: 'name', header: 'Name', render: (i) => <span className="font-medium">{i.name}</span> },
-          { key: 'uom', header: 'UOM' },
+          { key: 'uom', header: 'UOM', render: (i) => i.uom },
           { key: 'cost', header: 'Cost', align: 'right', render: (i) => fmt(i.cost) },
           { key: 'price', header: 'Price', align: 'right', render: (i) => fmt(i.price) },
           {

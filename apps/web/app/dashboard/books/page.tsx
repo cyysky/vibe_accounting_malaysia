@@ -16,7 +16,7 @@ const accountSchema = z.object({
   code: z.string().min(1, 'Required'),
   name: z.string().min(1, 'Required'),
   type: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE']),
-  currency: z.string().optional().default('MYR'),
+  currency: z.string().min(1, 'Required'),
 });
 type AccountForm = z.infer<typeof accountSchema>;
 
@@ -92,7 +92,7 @@ export default function ChartOfAccountsPage() {
             header: 'Type',
             render: (a) => <Badge tone={typeTone(a.type)}>{a.type}</Badge>,
           },
-          { key: 'currency', header: 'Currency' },
+          { key: 'currency', header: 'Currency', render: (a) => a.currency },
           {
             key: 'active',
             header: 'Status',
@@ -151,7 +151,7 @@ export default function ChartOfAccountsPage() {
               <option value="EXPENSE">Expense</option>
             </Select>
           </Field>
-          <Field label="Currency">
+          <Field label="Currency" required>
             <Select {...form.register('currency')}>
               <option>MYR</option>
               <option>USD</option>

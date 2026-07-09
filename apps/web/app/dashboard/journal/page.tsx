@@ -107,7 +107,7 @@ export default function JournalPage() {
         columns={[
           { key: 'number', header: 'Number', render: (j) => <span className="font-mono text-xs">{j.number}</span> },
           { key: 'date', header: 'Date', render: (j) => j.date },
-          { key: 'description', header: 'Description' },
+          { key: 'description', header: 'Description', render: (j) => j.description },
           {
             key: 'status',
             header: 'Status',

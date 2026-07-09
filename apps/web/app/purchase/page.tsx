@@ -70,7 +70,7 @@ export default function PurchasePage() {
           { key: 'supplier', header: 'Supplier', render: (o) => o.supplierName },
           { key: 'date', header: 'Date', render: (o) => o.date },
           { key: 'total', header: 'Total', align: 'right', render: (o) => fmt(o.total) },
-          { key: 'status', header: 'Status' },
+          { key: 'status', header: 'Status', render: (o) => o.status },
         ]}
       />
 

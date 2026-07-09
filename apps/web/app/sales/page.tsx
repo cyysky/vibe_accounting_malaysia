@@ -70,7 +70,7 @@ export default function SalesPage() {
           { key: 'customer', header: 'Customer', render: (o) => o.customerName },
           { key: 'date', header: 'Date', render: (o) => o.date },
           { key: 'total', header: 'Total', align: 'right', render: (o) => fmt(o.total) },
-          { key: 'status', header: 'Status' },
+          { key: 'status', header: 'Status', render: (o) => o.status },
         ]}
       />
 

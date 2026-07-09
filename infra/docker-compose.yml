@@ -1,0 +1,104 @@
+services:
+  # --- application ---
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    image: vibe-accounting-malaysia/api:0.1.0
+    container_name: vibe-accounting-malaysia-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://vibe:vibe@postgres:5432/vibe
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      PORT: 3000
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    networks: [internal]
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    image: vibe-accounting-malaysia/web:0.1.0
+    container_name: vibe-accounting-malaysia-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://nginx/api
+      PORT: 3000
+    depends_on:
+      - api
+    expose:
+      - "3000"
+    networks: [internal]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: vibe-accounting-malaysia-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"          # ONLY host port we publish
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+      - web
+    networks: [internal]
+
+  # --- data plane (internal only, never published to host) ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: vibe-accounting-malaysia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vibe
+      POSTGRES_PASSWORD: vibe
+      POSTGRES_DB: vibe
+    volumes:
+      - vibe_pg:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vibe -d vibe"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    expose:
+      - "5432"
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    container_name: vibe-accounting-malaysia-redis
+    restart: unless-stopped
+    expose:
+      - "6379"
+    networks: [internal]
+
+  minio:
+    image: minio/minio:latest
+    container_name: vibe-accounting-malaysia-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: vibe
+      MINIO_ROOT_PASSWORD: vibe-secret-2026
+    volumes:
+      - vibe_minio:/data
+    expose:
+      - "9000"
+      - "9001"
+    networks: [internal]
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  vibe_pg:
+  vibe_minio:

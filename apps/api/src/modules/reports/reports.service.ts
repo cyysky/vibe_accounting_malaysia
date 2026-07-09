@@ -9,15 +9,15 @@ export class ReportsService {
     private readonly dashboard: DashboardService,
   ) {}
 
-  profitAndLoss() {
-    const tb = this.gl.trialBalance();
+  async profitAndLoss(bookId: string) {
+    const tb = await this.gl.trialBalance(bookId);
     const revenue = tb.filter((r) => r.account.type === 'REVENUE').reduce((s, r) => s + (r.credit - r.debit), 0);
     const expenses = tb.filter((r) => r.account.type === 'EXPENSE').reduce((s, r) => s + (r.debit - r.credit), 0);
     return { revenue, expenses, netIncome: revenue - expenses };
   }
 
-  balanceSheet() {
-    const tb = this.gl.trialBalance();
+  async balanceSheet(bookId: string) {
+    const tb = await this.gl.trialBalance(bookId);
     const sum = (type: 'ASSET' | 'LIABILITY' | 'EQUITY') =>
       tb
         .filter((r) => r.account.type === type)
@@ -33,11 +33,12 @@ export class ReportsService {
     return { assets, liabilities, equity, balanced: Math.abs(assets - (liabilities + equity)) < 0.01 };
   }
 
-  executiveSummary() {
-    return {
-      ...this.dashboard.summary(),
-      pnl: this.profitAndLoss(),
-      bs: this.balanceSheet(),
-    };
+  async executiveSummary(bookId: string) {
+    const [dash, pnl, bs] = await Promise.all([
+      this.dashboard.summary(bookId),
+      this.profitAndLoss(bookId),
+      this.balanceSheet(bookId),
+    ]);
+    return { ...dash, pnl, bs };
   }
 }

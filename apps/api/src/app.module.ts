@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AccountBooksModule } from './modules/account-books/account-books.module';
@@ -11,12 +12,12 @@ import { PurchaseModule } from './modules/purchase/purchase.module';
 import { StockModule } from './modules/stock/stock.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportsModule } from './modules/reports/reports.module';
-import { DataStoreModule } from './database/data-store.module';
+import { EinvoiceModule } from './modules/einvoice/einvoice.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    DataStoreModule,
+    DatabaseModule,
     HealthModule,
     AuthModule,
     AccountBooksModule,
@@ -28,6 +29,7 @@ import { DataStoreModule } from './database/data-store.module';
     StockModule,
     DashboardModule,
     ReportsModule,
+    EinvoiceModule,
   ],
 })
 export class AppModule {}

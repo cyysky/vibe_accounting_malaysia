@@ -13,11 +13,16 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       PORT: 3000
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:8080}
+      UPLOAD_DIR: /var/lib/vibe/uploads
     depends_on:
       postgres:
         condition: service_healthy
     expose:
       - "3000"
+    volumes:
+      # Persistent app data lives on the host under infra/data
+      - ./data/uploads:/var/lib/vibe/uploads
+      - ./data/backups:/var/lib/vibe/backups
     networks: [internal]
 
   web:
@@ -60,7 +65,10 @@ services:
       POSTGRES_PASSWORD: vibe
       POSTGRES_DB: vibe
     volumes:
-      - vibe_pg:/var/lib/postgresql/data
+      # Postgres data files live on the host under infra/data/postgres
+      # so they survive container removal (`docker compose down` without -v)
+      # and can be backed up with normal filesystem tools.
+      - ./data/postgres:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vibe -d vibe"]
@@ -74,6 +82,3 @@ services:
 networks:
   internal:
     driver: bridge
-
-volumes:
-  vibe_pg:

@@ -45,6 +45,20 @@ REST/JSON, with PostgreSQL as the system of record.
 - `Item`, `StockMovement` — Stock module.
 - `TaxCode`, `Currency`, `FiscalYear`, `NumberSequence` — config.
 
+## Persistent data
+
+All runtime data is stored on the host under `infra/data/`. Bind mounts:
+
+| Host path                | Container path                | Used by    |
+| ------------------------ | ----------------------------- | ---------- |
+| `infra/data/postgres/`   | `/var/lib/postgresql/data`    | postgres   |
+| `infra/data/uploads/`    | `/var/lib/vibe/uploads`       | api        |
+| `infra/data/backups/`    | `/var/lib/vibe/backups`       | api        |
+
+This means data survives `docker compose down` (without `-v`) and can be
+backed up with normal filesystem tools. The `infra/data/.gitignore` excludes
+runtime files from git.
+
 ## Branding & deployment
 
 - npm workspace: `vibe-accounting-malaysia`

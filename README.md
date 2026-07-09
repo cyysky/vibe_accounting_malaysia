@@ -25,6 +25,10 @@ purchase, invoicing and financial reporting modules in a modern web stack.
    +- docker-compose.yml     # api, web, nginx, postgres
    +- nginx/                # reverse-proxy config (single host port)
    +- postgres/init/        # extensions bootstrap SQL
+   +- data/                 # PERSISTENT host data (bind-mounted into containers)
+   |  +- postgres/          #   PostgreSQL data files
+   |  +- uploads/           #   app file uploads (api -> /var/lib/vibe/uploads)
+   |  +- backups/           #   db dumps, exports
 +- docs/
    +- architecture.md
 ```
@@ -43,6 +47,21 @@ purchase, invoicing and financial reporting modules in a modern web stack.
 | Stock / Items   | `stock`   | `/stock`                    |
 | Financial Reports | `reports` | `/reports`                |
 | Dashboard       | `dashboard` | `/dashboard`              |
+
+## Persistent data
+
+All runtime data is stored on the host under `infra/data/`. This means data
+survives container removal (`docker compose down` without `-v`) and can be
+backed up with normal filesystem tools.
+
+| Host path                | Container path                | Used by    |
+| ------------------------ | ----------------------------- | ---------- |
+| `infra/data/postgres/`   | `/var/lib/postgresql/data`    | postgres   |
+| `infra/data/uploads/`    | `/var/lib/vibe/uploads`       | api        |
+| `infra/data/backups/`    | `/var/lib/vibe/backups`       | api        |
+
+The `infra/data/.gitignore` excludes everything from git by default; only the
+folder structure and `.gitkeep` placeholders are committed.
 
 ## Quick start
 

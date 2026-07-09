@@ -43,7 +43,12 @@ REST/JSON, with PostgreSQL as the system of record.
 - `Account`, `JournalEntry`, `JournalLine` — GL backbone.
 - `Customer`, `Supplier`, `CustomerInvoice`, `SupplierInvoice` — AR / AP.
 - `Item`, `StockMovement` — Stock module.
-- `TaxCode`, `Currency`, `FiscalYear`, `NumberSequence` — config.
+- TaxCode, Currency, FiscalYear, NumberSequence - config.
+
+## Operations
+
+See [docs/operations.md](operations.md) for backup, restore, troubleshooting and
+upgrade procedures.
 
 ## Persistent data
 

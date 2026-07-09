@@ -28,9 +28,11 @@ purchase, invoicing and financial reporting modules in a modern web stack.
    +- data/                 # PERSISTENT host data (bind-mounted into containers)
    |  +- postgres/          #   PostgreSQL data files
    |  +- uploads/           #   app file uploads (api -> /var/lib/vibe/uploads)
-   |  +- backups/           #   db dumps, exports
+   |  +- backups/           #   db dumps, snapshots
++- scripts/                  # PowerShell helpers for stack lifecycle + backups
 +- docs/
    +- architecture.md
+   +- operations.md
 ```
 
 ## Modules
@@ -48,21 +50,6 @@ purchase, invoicing and financial reporting modules in a modern web stack.
 | Financial Reports | `reports` | `/reports`                |
 | Dashboard       | `dashboard` | `/dashboard`              |
 
-## Persistent data
-
-All runtime data is stored on the host under `infra/data/`. This means data
-survives container removal (`docker compose down` without `-v`) and can be
-backed up with normal filesystem tools.
-
-| Host path                | Container path                | Used by    |
-| ------------------------ | ----------------------------- | ---------- |
-| `infra/data/postgres/`   | `/var/lib/postgresql/data`    | postgres   |
-| `infra/data/uploads/`    | `/var/lib/vibe/uploads`       | api        |
-| `infra/data/backups/`    | `/var/lib/vibe/backups`       | api        |
-
-The `infra/data/.gitignore` excludes everything from git by default; only the
-folder structure and `.gitkeep` placeholders are committed.
-
 ## Quick start
 
 ### Dev (no Docker, two terminals)
@@ -75,21 +62,78 @@ npm run dev:web   # http://localhost:3000  (proxies /api/proxy to 3001)
 
 ### Full stack (Docker, single host port)
 
-```bash
-cd infra
-cp .env.example .env
-docker compose up -d --build
-# Web:     http://localhost:8080
-# API:     http://localhost:8080/api
-# Swagger: http://localhost:8080/api/docs
+```powershell
+# from repo root
+.\scripts\up.ps1            # start (no rebuild)
+.\scripts\up.ps1 -Build     # start after rebuilding images
+
+.\scripts\status.ps1        # container status + data dir sizes
+.\scripts\down.ps1          # stop (data intact)
+.\scripts\down.ps1 -Volumes # stop + wipe anonymous volumes (data still intact)
 ```
 
-The nginx container is the **only** service with a published host port (`8080:80`).
-PostgreSQL lives on the internal `internal` Docker network and is not reachable
-from the host — ideal when other containers already occupy common ports on this
-machine.
+Once up:
 
-To change the public port, edit `infra/.env` and the `ports:` mapping in
-`docker-compose.yml`.
+- Web: `http://localhost:8080`
+- API: `http://localhost:8080/api`
+- Swagger: `http://localhost:8080/api/docs`
 
 Default sign-in: `admin@example.com` / `ChangeMe!123`.
+
+## Persistent data
+
+All runtime data is stored on the host under `infra/data/`. This means data
+survives container removal (`scripts/down.ps1`) and can be backed up with
+normal filesystem tools.
+
+| Host path                | Container path                | Used by    |
+| ------------------------ | ----------------------------- | ---------- |
+| `infra/data/postgres/`   | `/var/lib/postgresql/data`    | postgres   |
+| `infra/data/uploads/`    | `/var/lib/vibe/uploads`       | api        |
+| `infra/data/backups/`    | `/var/lib/vibe/backups`       | api        |
+
+The `infra/data/.gitignore` excludes runtime files from git; only the folder
+structure and `.gitkeep` placeholders are committed.
+
+## Backups and restore
+
+```powershell
+# Create a snapshot of infra/data/ (Postgres files, uploads, backups)
+.\scripts\backup.ps1
+.\scripts\backup.ps1 -OutFile before-upgrade.zip
+
+# Stop the stack, restore from a snapshot, and start again
+.\scripts\restore.ps1 -Archive infra\data\backups\vibe-backup-2026-07-10.zip
+
+# Stop the stack, wipe infra/data/ entirely, then restore from a snapshot
+.\scripts\restore.ps1 -Archive .\my-snapshot.zip -Prune
+```
+
+Snapshots are written to `infra/data/backups/`. The backup is a regular zip
+file — copy it off-host (rsync, OneDrive, S3, …) for offsite safety.
+
+## Destructive reset
+
+```powershell
+.\scripts\reset.ps1         # prompts for confirmation
+.\scripts\reset.ps1 -Force  # no prompt
+```
+
+This stops the stack, deletes `infra/data/` (Postgres files, uploads, backups),
+and recreates the empty skeleton. Run `scripts/up.ps1` afterwards to start
+fresh.
+
+## Documentation
+
+- [docs/architecture.md](docs/architecture.md) — system architecture, modules, data model
+- [docs/operations.md](docs/operations.md) — backup/restore, troubleshooting, day-2 ops
+
+## Ports
+
+The nginx container is the **only** service with a published host port
+(`8080:80`). Postgres, the api and the web live on the internal `internal`
+Docker network and are not reachable from the host — ideal when other
+containers already occupy common ports on this machine.
+
+To change the public port, edit `infra/.env` (`PUBLIC_PORT`) and the
+`ports:` mapping in `infra/docker-compose.yml`.

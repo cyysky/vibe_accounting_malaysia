@@ -70,6 +70,12 @@ docker build -f apps/api/Dockerfile --target tester -t vibe-accounting-malaysia/
 docker run --rm vibe-accounting-malaysia/api-test
 ```
 
+
+> **CI**: A GitHub Actions workflow is provided in `.github/workflows/ci.yml`
+> (build + unit tests + smoke test).  Some Personal Access Tokens lack the
+> `workflow` scope required to push workflow files to GitHub; in that case
+> the file lives in your local checkout and CI runs from your own runner.
+
 ## Documentation
 
 - [docs/architecture.md](docs/architecture.md) — system architecture,

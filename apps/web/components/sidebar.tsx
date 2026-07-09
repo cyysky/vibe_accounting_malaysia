@@ -17,6 +17,8 @@ import {
   FileCheck2,
   Receipt,
   Users,
+  Calculator,
+  CalendarRange,
 } from 'lucide-react';
 
 const sections = [
@@ -55,6 +57,8 @@ const sections = [
     title: 'Admin',
     items: [
       { href: '/settings/books', label: 'Account Books', icon: Users },
+      { href: '/settings/tax-codes', label: 'Tax Codes', icon: Calculator },
+      { href: '/settings/fiscal-years', label: 'Fiscal Years', icon: CalendarRange },
     ],
   },
 ];

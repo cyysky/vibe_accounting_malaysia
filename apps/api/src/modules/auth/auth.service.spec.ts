@@ -20,13 +20,13 @@ describe('AuthService', () => {
 
   it('throws on wrong password', async () => {
     const hash = await bcrypt.hash('right', 4);
-    prisma.user.findUnique.mockResolvedValue({ id: '1', email: 'a@b.c', name: 'A', role: 'OWNER', passwordHash: hash, accountBookId: 'ab' });
+    prisma.user.findUnique.mockResolvedValue({ id: '1', email: 'a@b.c', name: 'A', role: 'OWNER', passwordHash: hash, accountBookId: 'ab', active: true });
     await expect(service.login({ email: 'a@b.c', password: 'wrong' })).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('returns tokens on correct credentials', async () => {
     const hash = await bcrypt.hash('right', 4);
-    prisma.user.findUnique.mockResolvedValue({ id: '1', email: 'a@b.c', name: 'A', role: 'OWNER', passwordHash: hash, accountBookId: 'ab' });
+    prisma.user.findUnique.mockResolvedValue({ id: '1', email: 'a@b.c', name: 'A', role: 'OWNER', passwordHash: hash, accountBookId: 'ab', active: true });
     const res = await service.login({ email: 'a@b.c', password: 'right' });
     expect(res.accessToken).toBe('signed-token');
     expect(res.refreshToken).toBe('signed-token');

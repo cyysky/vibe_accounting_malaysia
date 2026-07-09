@@ -28,16 +28,16 @@ front end, packaged as a self-contained Docker Compose stack.
 | ------------- | ------------------------------------------------- |
 | `auth`        | JWT login, bcrypt password hashing                |
 | `account-books` | Multi-company support                          |
-| `gl`          | Chart of accounts, journal entries, trial balance |
-| `ar`          | Customers, AR invoices (with tax + line totals)   |
-| `ap`          | Suppliers, AP bills                               |
-| `sales`       | Sales orders                                      |
-| `purchase`    | Purchase orders                                   |
-| `stock`       | Items, low-stock alerts                           |
-| `dashboard`   | KPI summary                                       |
-| `reports`     | P&L, balance sheet                                |
-| `einvoice`    | MyInvois / LHDNM e-invoice submission             |
-| `health`      | Container / app liveness                          |
+| `gl`          | Chart of accounts, journals, tax codes, fiscal years, trial balance |
+| `ar`          | Customers, AR invoices (with tax + line totals, **auto GL post**)    |
+| `ap`          | Suppliers, AP bills (**auto GL post**)                              |
+| `sales`       | Sales orders + **convert-to-invoice** flow                          |
+| `purchase`    | Purchase orders                                                    |
+| `stock`       | Items, low-stock alerts                                            |
+| `dashboard`   | KPI summary + quick actions                                        |
+| `reports`     | P&L, balance sheet                                                 |
+| `einvoice`    | MyInvois / LHDNM e-invoice submission + lifecycle + recent docs   |
+| `health`      | Container / app liveness                                           |
 
 ## Quick start
 
@@ -48,6 +48,27 @@ docker compose -f infra\docker-compose.yml up -d --build
 
 Then open <http://localhost:8080> and sign in with
 `admin@example.com` / `ChangeMe!123`.
+
+
+## Accounting automation
+
+- **Automatic GL posting** — every customer invoice or supplier bill
+  generates a balanced journal entry (DR Accounts Receivable / CR Sales
+  + CR SST; DR Purchases + DR Input Tax / CR Accounts Payable).
+  Posting is wrapped in a try/catch so missing GL accounts never roll
+  back the source transaction; the warning is logged instead.
+- **Sales order -> invoice** — POST `/api/ar/sales-orders/:id/convert-to-invoice`
+  converts a sales order into a customer invoice and closes the SO.
+- **Fiscal years** — journals can only be posted to an open fiscal year;
+  the bootstrap seed creates the current and next year automatically.
+
+## Tests
+
+```bash
+# Build the API test image and run unit tests
+docker build -f apps/api/Dockerfile --target tester -t vibe-accounting-malaysia/api-test .
+docker run --rm vibe-accounting-malaysia/api-test
+```
 
 ## Documentation
 

@@ -1,7 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCcw, Send, X } from 'lucide-react';
+import { RefreshCcw, Send, X, Ban, Download } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
@@ -25,12 +26,32 @@ export default function EinvoiceSubmissionsPage() {
     mutationFn: (id: string) => api.cancelEinvoice(id, 'User requested cancellation'),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }),
   });
+  const reject = useMutation({
+    mutationFn: (id: string) => api.rejectEinvoice(id, 'Buyer rejected the document'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }),
+  });
+  const recent = useMutation({
+    mutationFn: () => api.recentEinvoices('SANDBOX'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }),
+  });
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  useEffect(() => {
+    if (recent.isSuccess) setLastSync(new Date().toLocaleTimeString('en-MY'));
+  }, [recent.isSuccess]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">MyInvois Submissions</h1>
-        <p className="text-sm text-slate-500">e-Invoice submission history and status. Auto-refreshes every 10 s.</p>
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">MyInvois Submissions</h1>
+          <p className="text-sm text-slate-500">e-Invoice submission history and status. Auto-refreshes every 10 s.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {lastSync && <span className="text-xs text-slate-500">Last sync: {lastSync}</span>}
+          <Button variant="secondary" size="sm" onClick={() => recent.mutate()} loading={recent.isPending}>
+            <Download className="h-3.5 w-3.5" /> Sync recent
+          </Button>
+        </div>
       </div>
 
       <DataTable
@@ -74,9 +95,14 @@ export default function EinvoiceSubmissionsPage() {
                 <Button size="sm" variant="ghost" onClick={() => poll.mutate(s.id)} disabled={poll.isPending}>
                   <RefreshCcw className="h-4 w-4" /> Poll
                 </Button>
-                {s.documentStatus !== 4 && (
+                {s.documentStatus !== 4 && s.documentStatus !== 3 && (
                   <Button size="sm" variant="ghost" onClick={() => cancel.mutate(s.id)} disabled={cancel.isPending}>
                     <X className="h-4 w-4 text-rose-600" /> Cancel
+                  </Button>
+                )}
+                {s.documentStatus === 2 && (
+                  <Button size="sm" variant="ghost" onClick={() => reject.mutate(s.id)} disabled={reject.isPending} title="Buyer-initiated rejection">
+                    <Ban className="h-4 w-4 text-amber-600" /> Reject
                   </Button>
                 )}
               </div>

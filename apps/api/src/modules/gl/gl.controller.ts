@@ -3,6 +3,8 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { GlService } from './gl.service';
 import { CreateAccountDto, UpdateAccountDto } from './dto/account.dto';
 import { CreateJournalDto } from './dto/journal.dto';
+import { CreateTaxCodeDto, UpdateTaxCodeDto } from './dto/tax-code.dto';
+import { CreateFiscalYearDto, UpdateFiscalYearDto } from './dto/fiscal-year.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthUser } from '@account/shared';
@@ -56,5 +58,51 @@ export class GlController {
   trialBalance(@CurrentUser() user: AuthUser) {
     if (!user.accountBookId) throw new Error('User has no account book');
     return this.svc.trialBalance(user.accountBookId);
+  }
+
+  // --- Tax codes ---
+  @Get('tax-codes')
+  taxCodes(@CurrentUser() user: AuthUser): Promise<Array<Record<string, unknown>>> {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.listTaxCodes(user.accountBookId);
+  }
+
+  @Post('tax-codes')
+  createTaxCode(@CurrentUser() user: AuthUser, @Body() dto: CreateTaxCodeDto): Promise<Record<string, unknown>> {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.createTaxCode(user.accountBookId, dto);
+  }
+
+  @Put('tax-codes/:id')
+  updateTaxCode(@Param('id') id: string, @Body() dto: UpdateTaxCodeDto): Promise<Record<string, unknown>> {
+    return this.svc.updateTaxCode(id, dto);
+  }
+
+  @Delete('tax-codes/:id')
+  deleteTaxCode(@Param('id') id: string): Promise<void> {
+    return this.svc.deleteTaxCode(id);
+  }
+
+  // --- Fiscal years ---
+  @Get('fiscal-years')
+  fiscalYears(@CurrentUser() user: AuthUser): Promise<Array<Record<string, unknown>>> {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.listFiscalYears(user.accountBookId);
+  }
+
+  @Post('fiscal-years')
+  createFiscalYear(@CurrentUser() user: AuthUser, @Body() dto: CreateFiscalYearDto): Promise<Record<string, unknown>> {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.createFiscalYear(user.accountBookId, dto);
+  }
+
+  @Put('fiscal-years/:id')
+  updateFiscalYear(@Param('id') id: string, @Body() dto: UpdateFiscalYearDto): Promise<Record<string, unknown>> {
+    return this.svc.updateFiscalYear(id, dto);
+  }
+
+  @Delete('fiscal-years/:id')
+  deleteFiscalYear(@Param('id') id: string): Promise<void> {
+    return this.svc.deleteFiscalYear(id);
   }
 }

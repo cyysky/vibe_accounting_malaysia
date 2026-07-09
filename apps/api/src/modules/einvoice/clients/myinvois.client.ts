@@ -15,6 +15,12 @@ interface TokenResponse {
  *   - Submit signed documents (single + batch).
  *   - Poll / search documents.
  *   - Cancel a document (status -> 4 = Cancelled).
+ *   - Reject a document (buyer-initiated).
+ *   - Validate / search taxpayer TIN.
+ *   - Retrieve recent documents.
+ *   - Resolve QR code (Base64) -> taxpayer info.
+ *
+ * All MyInvois endpoints documented at https://sdk.myinvois.hasil.gov.my/einvoicingapi/.
  */
 @Injectable()
 export class MyInvoisClient {
@@ -27,11 +33,6 @@ export class MyInvoisClient {
     return Number(this.config.get<string>('EINVOICE_TIMEOUT_MS') ?? 30000);
   }
 
-  /**
-   * Fetch an OAuth2 access token (client_credentials grant). Cached per
-   * environment for 60 minutes minus a 60-second safety window, matching
-   * the SDK recommendation.
-   */
   async getAccessToken(cfg: EinvoiceConfig): Promise<string> {
     const cached = this.cache.get(cfg.environment);
     if (cached && cached.expiresAt > Date.now()) return cached.token;
@@ -58,24 +59,12 @@ export class MyInvoisClient {
     return (res as TokenResponse).access_token;
   }
 
-  async submitDocuments(cfg: EinvoiceConfig, documents: Array<Record<string, unknown>>): Promise<unknown> {
+  async getSubmission(cfg: EinvoiceConfig, submissionUid: string, pageNo = 1, pageSize = 10): Promise<unknown> {
     const token = await this.getAccessToken(cfg);
-    return this.request({
-      method: 'POST',
-      url: cfg.endpoints.base + cfg.endpoints.submit,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ documents }),
-    });
-  }
-
-  async searchDocuments(cfg: EinvoiceConfig, query: Record<string, unknown>): Promise<unknown> {
-    const token = await this.getAccessToken(cfg);
+    const q = new URLSearchParams({ pageNo: String(pageNo), pageSize: String(pageSize) });
     return this.request({
       method: 'GET',
-      url: cfg.endpoints.base + cfg.endpoints.search + '?' + new URLSearchParams(query as Record<string, string>).toString(),
+      url: `${cfg.endpoints.base}/api/v1.0/documentsubmissions/${encodeURIComponent(submissionUid)}?${q.toString()}`,
       headers: { Authorization: `Bearer ${token}` },
     });
   }
@@ -99,10 +88,85 @@ export class MyInvoisClient {
     });
   }
 
-  /**
-   * Minimal HTTP request helper. Uses global fetch (Node 20) so we can
-   * rely on the runtime's TLS handling.
-   */
+  async rejectDocument(cfg: EinvoiceConfig, id: string, reason: string): Promise<unknown> {
+    const token = await this.getAccessToken(cfg);
+    return this.request({
+      method: 'PUT',
+      url: cfg.endpoints.base + cfg.endpoints.cancelDocument.replace('{id}', encodeURIComponent(id)),
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'rejected', reason }),
+    });
+  }
+
+  async validateTaxpayerTIN(cfg: EinvoiceConfig, tin: string, idType: string, idValue: string): Promise<unknown> {
+    const token = await this.getAccessToken(cfg);
+    const q = new URLSearchParams({ tin, idType, idValue });
+    return this.request({
+      method: 'GET',
+      url: `${cfg.endpoints.base}/api/v1.0/taxpayer/validate?${q.toString()}`,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
+  async searchTaxpayerTIN(cfg: EinvoiceConfig, query: Record<string, unknown>): Promise<unknown> {
+    const token = await this.getAccessToken(cfg);
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(query)) {
+      if (v !== undefined && v !== null) q.set(k, String(v));
+    }
+    return this.request({
+      method: 'GET',
+      url: `${cfg.endpoints.base}/api/v1.0/taxpayer/search?${q.toString()}`,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
+  async getTaxpayerQR(cfg: EinvoiceConfig, qrCodeBase64: string): Promise<unknown> {
+    const token = await this.getAccessToken(cfg);
+    return this.request({
+      method: 'GET',
+      url: `${cfg.endpoints.base}/api/v1.0/taxpayer/qrcodeinfo`,
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ qrCode: qrCodeBase64 }),
+    });
+  }
+
+  async submitDocuments(cfg: EinvoiceConfig, documents: Array<Record<string, unknown>>): Promise<unknown> {
+    const token = await this.getAccessToken(cfg);
+    return this.request({
+      method: 'POST',
+      url: cfg.endpoints.base + cfg.endpoints.submit,
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documents }),
+    });
+  }
+
+  async searchDocuments(cfg: EinvoiceConfig, query: Record<string, unknown>): Promise<unknown> {
+    const token = await this.getAccessToken(cfg);
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(query)) {
+      if (v !== undefined && v !== null) q.set(k, String(v));
+    }
+    return this.request({
+      method: 'GET',
+      url: cfg.endpoints.base + cfg.endpoints.search + '?' + q.toString(),
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
+  async getRecentDocuments(cfg: EinvoiceConfig, query: Record<string, unknown> = {}): Promise<unknown> {
+    const token = await this.getAccessToken(cfg);
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(query)) {
+      if (v !== undefined && v !== null) q.set(k, String(v));
+    }
+    return this.request({
+      method: 'GET',
+      url: cfg.endpoints.base + cfg.endpoints.getRecent + (q.toString() ? '?' + q.toString() : ''),
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
   private async request<T = unknown>(opts: {
     method: string;
     url: string;
@@ -129,11 +193,7 @@ export class MyInvoisClient {
     }
   }
 
-  /** For testing: clear token cache. */
   clearCache(): void {
     this.cache.clear();
   }
 }
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _Endpoints = EinvoiceEndpoints;

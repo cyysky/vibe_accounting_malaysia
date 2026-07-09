@@ -1,11 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
 import { CreateCustomerInvoiceDto, UpdateCustomerInvoiceDto } from './dto/customer-invoice.dto';
+import { PostingService } from '../gl/posting.service';
 
 @Injectable()
 export class ArService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ArService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly posting: PostingService,
+  ) {}
 
   // --- Customers -----------------------------------------------------------
   listCustomers(bookId?: string): Promise<Array<Record<string, unknown>>> {
@@ -64,24 +71,27 @@ export class ArService {
   }
 
   // --- Invoices ------------------------------------------------------------
-  async listInvoices(bookId: string, page = 1, pageSize = 50, customerId?: string): Promise<{
-    data: Array<Record<string, unknown>>;
-    total: number;
-    page: number;
-    pageSize: number;
-  }> {
+  async listInvoices(
+    bookId: string,
+    page = 1,
+    pageSize = 50,
+    customerId?: string,
+    status?: string,
+  ): Promise<{ data: Array<Record<string, unknown>>; total: number; page: number; pageSize: number }> {
     const skip = (Math.max(1, page) - 1) * Math.min(200, Math.max(1, pageSize));
     const take = Math.min(200, Math.max(1, pageSize));
-    const where = { accountBookId: bookId, ...(customerId ? { customerId } : {}) };
+    const where: Record<string, unknown> = { accountBookId: bookId };
+    if (customerId) where.customerId = customerId;
+    if (status) where.status = status;
     const [data, total] = await Promise.all([
       this.prisma.customerInvoice.findMany({
-        where,
+        where: where as never,
         include: { customer: true, lines: true },
         orderBy: { date: 'desc' },
         skip,
         take,
       }),
-      this.prisma.customerInvoice.count({ where }),
+      this.prisma.customerInvoice.count({ where: where as never }),
     ]);
     const mapped = data.map((i) => ({
       ...i,
@@ -156,11 +166,18 @@ export class ArService {
       },
       include: { customer: true, lines: true },
     });
-    // Update customer outstanding
     await this.prisma.customer.update({
       where: { id: dto.customerId },
       data: { outstanding: { increment: total } },
     });
+
+    // Auto-post to GL (DR AR, CR Sales + CR SST). Failure here does NOT roll back the invoice.
+    try {
+      await this.posting.postCustomerInvoice(created.id);
+    } catch (err) {
+      this.logger.warn(`GL post skipped for invoice ${created.number}: ${(err as Error).message}`);
+    }
+
     return { ...created, tax: created.taxTotal, customerName: created.customer?.name } as unknown as Record<string, unknown>;
   }
 
@@ -190,5 +207,53 @@ export class ArService {
   private async ensureInvoice(id: string): Promise<void> {
     const i = await this.prisma.customerInvoice.findUnique({ where: { id } });
     if (!i) throw new NotFoundException(`Invoice ${id} not found`);
+  }
+
+  /**
+   * Convert a Sales Order into a Customer Invoice.
+   * The SalesOrder model currently only stores a single `total` (no lines),
+   * so we create one synthetic invoice line from the order.
+   */
+  async convertSalesOrder(bookId: string, salesOrderId: string): Promise<Record<string, unknown>> {
+    const so = await this.prisma.salesOrder.findUnique({ where: { id: salesOrderId }, include: { customer: true } });
+    if (!so || so.accountBookId !== bookId) {
+      throw new NotFoundException(`Sales order ${salesOrderId} not found in this account book`);
+    }
+    if (so.status === 'CLOSED' || so.status === 'CANCELLED') {
+      throw new BadRequestException(`Sales order ${so.number} is ${so.status} and cannot be converted`);
+    }
+    const count = await this.prisma.customerInvoice.count({ where: { accountBookId: bookId } });
+    const number = `INV-${String(count + 1).padStart(5, '0')}`;
+    const today = new Date();
+    const due = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const total = Number(so.total);
+    const subtotal = total; // no tax in SO; tax applied at invoice level via lines
+    const created = await this.prisma.customerInvoice.create({
+      data: {
+        accountBookId: bookId,
+        customerId: so.customerId,
+        number,
+        date: today,
+        dueDate: due,
+        currency: 'MYR',
+        exchangeRate: 1,
+        subtotal,
+        taxTotal: 0,
+        total,
+        balance: total,
+        status: 'ISSUED',
+        notes: `Converted from ${so.number}`,
+        lines: { create: [{ description: `Sales order ${so.number}`, quantity: 1, unitPrice: total, discount: 0, subtotal, total, lineNo: 1 }] },
+      },
+      include: { customer: true, lines: true },
+    });
+    await this.prisma.customer.update({ where: { id: so.customerId }, data: { outstanding: { increment: total } } });
+    await this.prisma.salesOrder.update({ where: { id: so.id }, data: { status: 'CLOSED' } });
+    try {
+      await this.posting.postCustomerInvoice(created.id);
+    } catch (err) {
+      this.logger.warn(`GL post skipped for invoice ${created.number}: ${(err as Error).message}`);
+    }
+    return { ...created, tax: created.taxTotal, customerName: created.customer?.name } as unknown as Record<string, unknown>;
   }
 }

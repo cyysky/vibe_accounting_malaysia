@@ -13,6 +13,23 @@
 | e-Invoice    | node-forge (X.509 PKCS#7), UBL 2.1 JSON v1.1 |
 | Validation   | class-validator + zod (web)               |
 
+
+## Posting to GL
+
+When an invoice or bill is created the API auto-posts the corresponding
+journal entry:
+
+| Source                    | DR                | CR                  |
+| ------------------------- | ----------------- | ------------------- |
+| Customer invoice          | Accounts Receivable (1200) | Sales Revenue (4000) + SST Payable (2100) |
+| Supplier bill             | Purchases / Inventory (5000) + Input Tax (2110) | Accounts Payable (2000) |
+
+Posting is performed by `PostingService` and is best-effort: missing GL
+accounts produce a warning log instead of rolling back the source
+transaction, so the system keeps working on simplified charts of
+accounts.  Journals can only be posted to an open fiscal year, which
+the bootstrap seed creates for the current and next year.
+
 ## Container layout
 
 ```

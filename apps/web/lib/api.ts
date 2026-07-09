@@ -503,8 +503,54 @@ class ApiClient {
 
   // --- Tax codes ---
   taxCodes(): Promise<TaxCode[]> {
-    // Quick & dirty: not exposed yet, return empty.  Add a real endpoint later.
-    return Promise.resolve([]);
+    return this.request<TaxCode[]>('GET', '/gl/tax-codes');
+  }
+
+  createTaxCode(input: Partial<TaxCode>): Promise<TaxCode> {
+    return this.request<TaxCode>('POST', '/gl/tax-codes', input);
+  }
+
+  updateTaxCode(id: string, input: Partial<TaxCode>): Promise<TaxCode> {
+    return this.request<TaxCode>('PUT', `/gl/tax-codes/${id}`, input);
+  }
+
+  deleteTaxCode(id: string): Promise<void> {
+    return this.request<void>('DELETE', `/gl/tax-codes/${id}`);
+  }
+
+  // --- Fiscal years ---
+  fiscalYears(): Promise<Array<{ id: string; year: number; startDate: string; endDate: string; closed: boolean }>> {
+    return this.request('GET', '/gl/fiscal-years');
+  }
+
+  createFiscalYear(input: { year: number; startDate: string; endDate: string }): Promise<unknown> {
+    return this.request('POST', '/gl/fiscal-years', input);
+  }
+
+  // --- SO -> Invoice conversion ---
+  convertSalesOrder(salesOrderId: string): Promise<CustomerInvoice> {
+    return this.request<CustomerInvoice>('POST', `/ar/sales-orders/${salesOrderId}/convert-to-invoice`);
+  }
+
+  // --- e-Invoice additional ---
+  rejectEinvoice(id: string, reason: string): Promise<unknown> {
+    return this.request('POST', `/einvoice/submissions/${id}/reject`, { reason });
+  }
+
+  getEinvoiceDocument(id: string): Promise<unknown> {
+    return this.request('GET', `/einvoice/submissions/${id}/document`);
+  }
+
+  getEinvoiceSubmissionDetails(id: string): Promise<unknown> {
+    return this.request('GET', `/einvoice/submissions/${id}/details`);
+  }
+
+  recentEinvoices(env: 'SANDBOX' | 'PRODUCTION' = 'SANDBOX'): Promise<unknown> {
+    return this.request('GET', '/einvoice/recent', undefined, { env });
+  }
+
+  validateEinvoiceTin(input: { env?: 'SANDBOX' | 'PRODUCTION'; tin: string; idType: string; idValue: string }): Promise<unknown> {
+    return this.request('POST', '/einvoice/validate-tin', input);
   }
 }
 

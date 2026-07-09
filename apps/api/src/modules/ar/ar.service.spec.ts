@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ArService } from './ar.service';
 import { PrismaService } from '../../database/prisma.service';
+import { PostingService } from '../gl/posting.service';
 
 describe('ArService', () => {
   let service: ArService;
@@ -13,7 +14,7 @@ describe('ArService', () => {
       taxCode: { findUnique: jest.fn() },
     };
     const module = await Test.createTestingModule({
-      providers: [ArService, { provide: PrismaService, useValue: prisma }],
+      providers: [ArService, { provide: PrismaService, useValue: prisma }, { provide: PostingService, useValue: { postCustomerInvoice: jest.fn().mockResolvedValue(null), postSupplierInvoice: jest.fn().mockResolvedValue(null) } }],
     }).compile();
     service = module.get(ArService);
   });

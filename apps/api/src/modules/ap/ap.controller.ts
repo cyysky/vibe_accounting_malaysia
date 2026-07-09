@@ -46,9 +46,10 @@ export class ApController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('supplierId') supplierId?: string,
+    @Query('status') status?: string,
   ) {
     if (!user.accountBookId) throw new Error('User has no account book');
-    return this.svc.listInvoices(user.accountBookId, Number(page ?? 1), Number(pageSize ?? 50), supplierId);
+    return this.svc.listInvoices(user.accountBookId, Number(page ?? 1), Number(pageSize ?? 50), supplierId, status);
   }
 
   @Get('invoices/:id')

@@ -2,7 +2,7 @@
   "name": "vibe-accounting-malaysia",
   "private": true,
   "version": "0.1.0",
-  "description": "Vibe Accounting Malaysia — NestJS API + Next.js front end",
+  "description": "Vibe Accounting Malaysia \u2014 NestJS API + Next.js front end",
   "workspaces": [
     "apps/*",
     "packages/*"

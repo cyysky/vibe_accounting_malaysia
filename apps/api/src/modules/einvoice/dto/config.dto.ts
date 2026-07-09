@@ -34,3 +34,13 @@ export class SubmitInvoiceDto {
 export class CancelDocumentDto {
   @ApiProperty({ example: 'Customer requested cancellation' }) @IsString() reason!: string;
 }
+
+export class RejectDocumentDto {
+  @ApiProperty({ example: 'Order cancelled by buyer' }) @IsString() reason!: string;
+}
+
+export class ValidateTinDto {
+  @ApiProperty({ example: 'C20830570210' }) @IsString() tin!: string;
+  @ApiProperty({ example: 'BRN', description: 'NRIC, BRN, PASSPORT, etc.' }) @IsString() idType!: string;
+  @ApiProperty({ example: '202005123456' }) @IsString() idValue!: string;
+}

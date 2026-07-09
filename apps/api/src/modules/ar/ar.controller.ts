@@ -46,16 +46,16 @@ export class ArController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('customerId') customerId?: string,
+    @Query('status') status?: string,
   ) {
     if (!user.accountBookId) throw new Error('User has no account book');
-    return this.svc.listInvoices(user.accountBookId, Number(page ?? 1), Number(pageSize ?? 50), customerId);
+    return this.svc.listInvoices(user.accountBookId, Number(page ?? 1), Number(pageSize ?? 50), customerId, status);
   }
 
   @Get('invoices/:id')
   invoice(@Param('id') id: string): Promise<Record<string, unknown>> {
     return this.svc.getInvoice(id);
   }
-
   @Post('invoices')
   createInvoice(@CurrentUser() user: AuthUser, @Body() dto: CreateCustomerInvoiceDto): Promise<Record<string, unknown>> {
     if (!user.accountBookId) throw new Error('User has no account book');
@@ -70,5 +70,11 @@ export class ArController {
   @Delete('invoices/:id')
   deleteInvoice(@Param('id') id: string): Promise<void> {
     return this.svc.deleteInvoice(id);
+  }
+
+  @Post('sales-orders/:id/convert-to-invoice')
+  convert(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.convertSalesOrder(user.accountBookId, id);
   }
 }

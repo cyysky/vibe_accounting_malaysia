@@ -79,4 +79,46 @@ export class EinvoiceController {
     if (!user.accountBookId) throw new Error('User has no account book');
     return this.svc.cancelDocument(user.accountBookId, id, dto.reason);
   }
+
+  @Post('submissions/:id/reject')
+  reject(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CancelDocumentDto,
+  ) {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.rejectDocument(user.accountBookId, id, dto.reason);
+  }
+
+  @Get('submissions/:id/document')
+  document(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.getDocument(user.accountBookId, id);
+  }
+
+  @Get('submissions/:id/details')
+  submissionDetails(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.getSubmissionDetails(user.accountBookId, id);
+  }
+
+  @Get('recent')
+  recent(
+    @CurrentUser() user: AuthUser,
+    @Query('env') env: string = 'SANDBOX',
+    @Query('pageNo') pageNo?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.getRecentDocuments(user.accountBookId, env as never, Number(pageNo ?? 1), Number(pageSize ?? 20));
+  }
+
+  @Post('validate-tin')
+  validateTin(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { env?: string; tin: string; idType: string; idValue: string },
+  ) {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.validateTin(user.accountBookId, (body.env ?? 'SANDBOX') as never, body.tin, body.idType, body.idValue);
+  }
 }

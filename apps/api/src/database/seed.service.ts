@@ -166,5 +166,20 @@ export class SeedService implements OnApplicationBootstrap {
         });
       }
     }
+  
+    // --- fiscal year (current year) ---
+    const yr = new Date().getFullYear();
+    await this.prisma.fiscalYear.upsert({
+      where: { accountBookId_year: { accountBookId: book.id, year: yr } },
+      update: {},
+      create: { accountBookId: book.id, year: yr, startDate: new Date(`${yr}-01-01`), endDate: new Date(`${yr}-12-31`) },
+    });
+    // next year too, so dated invoices in Jan still post
+    const yr2 = yr + 1;
+    await this.prisma.fiscalYear.upsert({
+      where: { accountBookId_year: { accountBookId: book.id, year: yr2 } },
+      update: {},
+      create: { accountBookId: book.id, year: yr2, startDate: new Date(`${yr2}-01-01`), endDate: new Date(`${yr2}-12-31`) },
+    });
   }
 }

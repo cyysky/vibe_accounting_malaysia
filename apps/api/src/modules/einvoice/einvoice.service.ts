@@ -250,4 +250,66 @@ export class EinvoiceService {
     }
     return res;
   }
+
+  /**
+   * Buyer-initiated document rejection.  Uses the same PUT /state endpoint as
+   * cancellation but with status=rejected per the SDK docs.
+   */
+  async rejectDocument(bookId: string, submissionId: string, reason: string) {
+    const s = await this.getSubmission(bookId, submissionId);
+    if (!s.submissionUid) throw new BadRequestException('Submission has no submissionUid yet');
+    const cfg = await this.resolveConfig(bookId, s.environment);
+    const res = await this.client.rejectDocument(cfg, s.submissionUid, reason);
+    await this.prisma.einvoiceSubmission.update({
+      where: { id: submissionId },
+      data: { documentStatus: 3, completedAt: new Date() } as never,
+    });
+    if (s.invoiceId) {
+      await this.prisma.customerInvoice.update({
+        where: { id: s.invoiceId },
+        data: { einvoiceStatus: 'INVALID' } as never,
+      });
+    }
+    return res;
+  }
+
+  /**
+   * Validate a buyer's TIN + identification combination via MyInvois.
+   * Returns the raw MyInvois response.
+   */
+  async validateTin(bookId: string, env: EinvoiceEnvironment, tin: string, idType: string, idValue: string) {
+    const cfg = await this.resolveConfig(bookId, env);
+    return this.client.validateTaxpayerTIN(cfg, tin, idType, idValue);
+  }
+
+  /**
+   * Fetch the most recent submissions from MyInvois (last 31 days).
+   */
+  async getRecentDocuments(bookId: string, env: EinvoiceEnvironment, pageNo = 1, pageSize = 20) {
+    const cfg = await this.resolveConfig(bookId, env);
+    return this.client.getRecentDocuments(cfg, { pageNo: String(pageNo), pageSize: String(pageSize) });
+  }
+
+  /**
+   * Retrieve the full submission (including all individual documents) from MyInvois.
+   */
+  async getSubmissionDetails(bookId: string, submissionId: string) {
+    const s = await this.getSubmission(bookId, submissionId);
+    if (!s.submissionUid) throw new BadRequestException('Submission has no submissionUid yet');
+    const cfg = await this.resolveConfig(bookId, s.environment);
+    return this.client.getSubmission(cfg, s.submissionUid);
+  }
+
+  /**
+   * Retrieve a single document (XML or JSON) from MyInvois by its UUID/longId.
+   */
+  async getDocument(bookId: string, submissionId: string) {
+    const s = await this.getSubmission(bookId, submissionId);
+    const id = s.invoice?.einvoiceLongId ?? s.invoice?.einvoiceUuid;
+    if (!id) {
+      throw new BadRequestException('Submission has no document UUID yet - poll status first.');
+    }
+    const cfg = await this.resolveConfig(bookId, s.environment);
+    return this.client.getDocument(cfg, id);
+  }
 }

@@ -25,8 +25,8 @@ const supplierSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   postalCode: z.string().optional(),
-  country: z.string().default('MY'),
-  currency: z.string().default('MYR'),
+  country: z.string().min(1, 'Required'),
+  currency: z.string().min(1, 'Required'),
 });
 type SupplierForm = z.infer<typeof supplierSchema>;
 
@@ -188,14 +188,14 @@ export default function PayablesPage() {
           <Field label="BRN">
             <Input {...form.register('brn')} />
           </Field>
-          <Field label="Currency">
+          <Field label="Currency" required>
             <Select {...form.register('currency')}>
               <option>MYR</option>
               <option>USD</option>
               <option>SGD</option>
             </Select>
           </Field>
-          <Field label="Country">
+          <Field label="Country" required>
             <Select {...form.register('country')}>
               <option value="MY">Malaysia</option>
               <option value="SG">Singapore</option>

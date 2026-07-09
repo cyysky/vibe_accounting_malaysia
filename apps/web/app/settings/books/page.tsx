@@ -8,7 +8,7 @@ import { DataTable } from '../../../components/ui/DataTable';
 import { Modal } from '../../../components/ui/Modal';
 import { Field, Input, Badge } from '../../../components/ui/Form';
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface Form {
   code: string;
@@ -26,11 +26,15 @@ export default function AccountBooksPage() {
   const books = useQuery({ queryKey: ['account-books'], queryFn: () => api.accountBooks() });
 
   const create = useMutation({
-    mutationFn: (data: Form) => api.request<AccountBook>('POST', '/account-books', data),
+    mutationFn: (data: Form) => api.createAccountBook(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['account-books'] });
       setShow(false);
     },
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api.deleteAccountBook(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['account-books'] }),
   });
 
   const form = useForm<Form>({
@@ -64,6 +68,16 @@ export default function AccountBooksPage() {
             key: 'active',
             header: 'Status',
             render: (b) => <Badge tone={b.active ? 'success' : 'default'}>{b.active ? 'Active' : 'Inactive'}</Badge>,
+          },
+          {
+            key: 'actions',
+            header: '',
+            align: 'right',
+            render: (b) => (
+              <Button size="sm" variant="ghost" onClick={() => confirm(`Delete ${b.code}?`) && remove.mutate(b.id)}>
+                <Trash2 className="h-4 w-4 text-rose-600" />
+              </Button>
+            ),
           },
         ]}
       />

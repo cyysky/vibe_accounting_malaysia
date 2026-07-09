@@ -18,11 +18,11 @@ const itemSchema = z.object({
   code: z.string().min(1, 'Required'),
   name: z.string().min(1, 'Required'),
   description: z.string().optional(),
-  uom: z.string().default('PCS'),
-  cost: z.coerce.number().min(0).default(0),
-  price: z.coerce.number().min(0).default(0),
-  onHand: z.coerce.number().default(0),
-  reorderLevel: z.coerce.number().default(0),
+  uom: z.string().min(1, 'Required'),
+  cost: z.coerce.number().min(0),
+  price: z.coerce.number().min(0),
+  onHand: z.coerce.number(),
+  reorderLevel: z.coerce.number(),
   classification: z.string().optional(),
 });
 type ItemForm = z.infer<typeof itemSchema>;
@@ -169,7 +169,7 @@ export default function StockPage() {
           <Field label="Name" required>
             <Input {...form.register('name')} placeholder="Standard Widget" />
           </Field>
-          <Field label="UOM" hint="Unit of Measure (PCS, HOUR, KG…)">
+          <Field label="UOM" hint="Unit of Measure (PCS, HOUR, KG…)" required>
             <Input {...form.register('uom')} />
           </Field>
           <Field label="Classification" hint="MyInvois classification code">

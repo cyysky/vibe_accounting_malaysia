@@ -15,8 +15,8 @@ import { Field, Input, Textarea, Badge } from '../../../components/ui/Form';
 const lineSchema = z.object({
   accountId: z.string().min(1, 'Required'),
   description: z.string().optional(),
-  debit: z.coerce.number().min(0).default(0),
-  credit: z.coerce.number().min(0).default(0),
+  debit: z.coerce.number().min(0),
+  credit: z.coerce.number().min(0),
 });
 
 const journalSchema = z.object({

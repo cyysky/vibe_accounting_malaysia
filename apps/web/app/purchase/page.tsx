@@ -17,7 +17,7 @@ const fmt = (n: number) => (n ?? 0).toLocaleString('en-MY', { style: 'currency',
 const schema = z.object({
   supplierId: z.string().min(1, 'Required'),
   date: z.string().min(1, 'Required'),
-  total: z.coerce.number().min(0).default(0),
+  total: z.coerce.number().min(0),
   notes: z.string().optional(),
 });
 type Form = z.infer<typeof schema>;

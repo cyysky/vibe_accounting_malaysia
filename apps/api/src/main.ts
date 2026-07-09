@@ -1,9 +1,11 @@
 import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ClassSerializerInterceptor } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { cors: true });
@@ -18,6 +20,8 @@ async function bootstrap(): Promise<void> {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   const swagger = new DocumentBuilder()
     .setTitle('Vibe Accounting Malaysia API')

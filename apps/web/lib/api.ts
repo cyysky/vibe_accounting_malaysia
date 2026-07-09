@@ -169,6 +169,7 @@ export interface Item {
   price: number;
   onHand: number;
   reorderLevel: number;
+  classification?: string;
   active: boolean;
 }
 
@@ -256,7 +257,7 @@ class ApiClient {
     else localStorage.removeItem('user');
   }
 
-  private async request<T>(method: string, path: string, body?: unknown, query?: Record<string, string | number | undefined>): Promise<T> {
+  async request<T>(method: string, path: string, body?: unknown, query?: Record<string, string | number | undefined>): Promise<T> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (this.token) headers.Authorization = `Bearer ${this.token}`;
 
@@ -307,6 +308,18 @@ class ApiClient {
   // --- Account books ---
   accountBooks(): Promise<AccountBook[]> {
     return this.request<AccountBook[]>('GET', '/account-books');
+  }
+
+  createAccountBook(input: Partial<AccountBook>): Promise<AccountBook> {
+    return this.request<AccountBook>('POST', '/account-books', input);
+  }
+
+  updateAccountBook(id: string, input: Partial<AccountBook>): Promise<AccountBook> {
+    return this.request<AccountBook>('PUT', '/account-books/' + id, input);
+  }
+
+  deleteAccountBook(id: string): Promise<void> {
+    return this.request<void>('DELETE', '/account-books/' + id);
   }
 
   // --- GL ---
@@ -496,3 +509,5 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+
+

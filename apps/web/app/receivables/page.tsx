@@ -26,9 +26,9 @@ const customerSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   postalCode: z.string().optional(),
-  country: z.string().default('MY'),
-  currency: z.string().default('MYR'),
-  creditLimit: z.coerce.number().min(0).default(0),
+  country: z.string().min(1, 'Required'),
+  currency: z.string().min(1, 'Required'),
+  creditLimit: z.coerce.number().min(0),
 });
 type CustomerForm = z.infer<typeof customerSchema>;
 
@@ -232,7 +232,7 @@ export default function ReceivablesPage() {
           <Field label="Credit Limit">
             <Input type="number" step="0.01" {...form.register('creditLimit', { valueAsNumber: true })} />
           </Field>
-          <Field label="Currency">
+          <Field label="Currency" required>
             <Select {...form.register('currency')}>
               <option>MYR</option>
               <option>USD</option>
@@ -253,7 +253,7 @@ export default function ReceivablesPage() {
           <Field label="Postal Code">
             <Input {...form.register('postalCode')} />
           </Field>
-          <Field label="Country">
+          <Field label="Country" required>
             <Select {...form.register('country')}>
               <option value="MY">Malaysia</option>
               <option value="SG">Singapore</option>

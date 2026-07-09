@@ -21,7 +21,12 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
 }
 
-export function DataTable<T extends Record<string, unknown>>({ data, columns, rowKey, empty, loading, onRowClick }: DataTableProps<T>) {
+export function DataTable<T>({ data, columns, rowKey, empty, loading, onRowClick }: DataTableProps<T>) {
+  function defaultRender(row: T, key: string): ReactNode {
+    const v = (row as Record<string, unknown>)[key];
+    if (v == null) return '';
+    return String(v);
+  }
   return (
     <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
       <table className="w-full text-sm">
@@ -71,7 +76,7 @@ export function DataTable<T extends Record<string, unknown>>({ data, columns, ro
                     key={c.key}
                     className={clsx('px-4 py-3', c.align === 'right' && 'text-right tabular-nums', c.align === 'center' && 'text-center', c.className)}
                   >
-                    {c.render ? c.render(row) : (row[c.key] as ReactNode)}
+                    {c.render ? c.render(row) : defaultRender(row, c.key)}
                   </td>
                 ))}
               </tr>

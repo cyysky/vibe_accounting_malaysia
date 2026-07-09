@@ -9,8 +9,8 @@ purchase, invoicing and financial reporting modules in a modern web stack.
 - **Backend** — NestJS (TypeScript), JWT auth, REST + OpenAPI
 - **Frontend** — Next.js 14 App Router (TypeScript), React Query, Tailwind CSS
 - **Shared** — a TypeScript types package consumed by both apps
-- **Infra** — Docker Compose with Postgres, Redis, MinIO, and **nginx as the
-  single host-facing entrypoint**
+- **Infra** — Docker Compose with PostgreSQL and **nginx as the single
+  host-facing entrypoint**
 
 ## Layout
 
@@ -22,7 +22,7 @@ purchase, invoicing and financial reporting modules in a modern web stack.
 +- packages/
 |  +- shared/       Cross-cutting TypeScript DTOs / enums
 +- infra/
-   +- docker-compose.yml     # api, web, nginx, postgres, redis, minio
+   +- docker-compose.yml     # api, web, nginx, postgres
    +- nginx/                # reverse-proxy config (single host port)
    +- postgres/init/        # extensions bootstrap SQL
 +- docs/
@@ -66,11 +66,11 @@ docker compose up -d --build
 ```
 
 The nginx container is the **only** service with a published host port (`8080:80`).
-Postgres, Redis and MinIO live on the internal `internal` Docker network and are
-not reachable from the host — ideal when other containers already occupy common
-ports on this machine.
+PostgreSQL lives on the internal `internal` Docker network and is not reachable
+from the host — ideal when other containers already occupy common ports on this
+machine.
 
-To expose MinIO''s console or change the public port, edit `infra/.env` and the
-`ports:` mapping in `docker-compose.yml`.
+To change the public port, edit `infra/.env` and the `ports:` mapping in
+`docker-compose.yml`.
 
 Default sign-in: `admin@example.com` / `ChangeMe!123`.

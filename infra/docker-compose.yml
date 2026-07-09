@@ -9,7 +9,6 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://vibe:vibe@postgres:5432/vibe
-      REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       PORT: 3000
@@ -72,33 +71,9 @@ services:
       - "5432"
     networks: [internal]
 
-  redis:
-    image: redis:7-alpine
-    container_name: vibe-accounting-malaysia-redis
-    restart: unless-stopped
-    expose:
-      - "6379"
-    networks: [internal]
-
-  minio:
-    image: minio/minio:latest
-    container_name: vibe-accounting-malaysia-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: vibe
-      MINIO_ROOT_PASSWORD: vibe-secret-2026
-    volumes:
-      - vibe_minio:/data
-    expose:
-      - "9000"
-      - "9001"
-    networks: [internal]
-
 networks:
   internal:
     driver: bridge
 
 volumes:
   vibe_pg:
-  vibe_minio:

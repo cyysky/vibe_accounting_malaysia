@@ -49,7 +49,7 @@ REST/JSON, with PostgreSQL as the system of record.
 
 - npm workspace: `vibe-accounting-malaysia`
 - Docker images: `vibe-accounting-malaysia/api`, `vibe-accounting-malaysia/web`
-- Container names: `vibe-accounting-malaysia-{api,web,nginx,postgres,redis,minio}`
+- Container names: `vibe-accounting-malaysia-{api,web,nginx,postgres}`
 - PostgreSQL role/db: `vibe`
-- Single host-facing port: **8080** (nginx); all data services on the internal
+- Single host-facing port: **8080** (nginx); data services on the internal
   Docker bridge network only.

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { DocumentSequenceService } from '../../database/document-sequence.service';
 
 /**
  * Service that auto-posts accounting transactions to the General Ledger.
@@ -27,7 +28,7 @@ import { PrismaService } from '../../database/prisma.service';
 export class PostingService {
   private readonly logger = new Logger(PostingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly seq: DocumentSequenceService) {}
 
   /** Returns the account id for a given book + code, or null. */
   private async accountId(bookId: string, code: string): Promise<string | null> {
@@ -95,8 +96,7 @@ export class PostingService {
     }
 
     // Numbered JV-#####
-    const count = await this.prisma.journalEntry.count({ where: { accountBookId: invoice.accountBookId } });
-    const number = `JV-${String(count + 1).padStart(4, '0')}`;
+    const number = await this.seq.next(invoice.accountBookId, "JV", 4);
 
     const created = await this.prisma.journalEntry.create({
       data: {
@@ -157,8 +157,7 @@ export class PostingService {
       lines.push({ accountId: inputTaxId, debit: taxTotal, credit: new Prisma.Decimal(0), description: `Input tax for ${invoice.number}` });
     }
 
-    const count = await this.prisma.journalEntry.count({ where: { accountBookId: invoice.accountBookId } });
-    const number = `JV-${String(count + 1).padStart(4, '0')}`;
+    const number = await this.seq.next(invoice.accountBookId, "JV", 4);
 
     const created = await this.prisma.journalEntry.create({
       data: {
@@ -216,8 +215,7 @@ export class PostingService {
       lines.unshift({ accountId: taxId, debit: taxTotal, credit: new Prisma.Decimal(0), description: `SST reversal ${cn.number}` });
     }
 
-    const count = await this.prisma.journalEntry.count({ where: { accountBookId: cn.accountBookId } });
-    const number = `JV-${String(count + 1).padStart(4, "0")}`;
+    const number = await this.seq.next(cn.accountBookId, "JV", 4);
 
     const created = await this.prisma.journalEntry.create({
       data: {
@@ -272,8 +270,7 @@ export class PostingService {
       lines.push({ accountId: inputTaxId, debit: taxTotal, credit: new Prisma.Decimal(0), description: `Input tax ${dn.number}` });
     }
 
-    const count = await this.prisma.journalEntry.count({ where: { accountBookId: dn.accountBookId } });
-    const number = `JV-${String(count + 1).padStart(4, "0")}`;
+    const number = await this.seq.next(dn.accountBookId, "JV", 4);
 
     const created = await this.prisma.journalEntry.create({
       data: {

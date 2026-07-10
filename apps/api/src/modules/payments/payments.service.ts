@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
+import { DocumentSequenceService } from "../../database/document-sequence.service";
 import { PaymentPostingService } from "../gl/posting-payments";
 import { CreateCustomerPaymentDto, CreateSupplierPaymentDto } from "./dto/payment.dto";
 
@@ -10,6 +11,7 @@ export class PaymentsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly seq: DocumentSequenceService,
     private readonly posting: PaymentPostingService,
   ) {}
 
@@ -60,8 +62,7 @@ export class PaymentsService {
       }
     }
 
-    const count = await this.prisma.customerPayment.count({ where: { accountBookId: bookId } });
-    const number = "RCP-" + String(count + 1).padStart(5, "0");
+    const number = await this.seq.next(bookId, "RCP");
 
     const result = await this.prisma.$transaction(async (tx) => {
       const payment = await tx.customerPayment.create({
@@ -152,8 +153,7 @@ export class PaymentsService {
       }
     }
 
-    const count = await this.prisma.supplierPayment.count({ where: { accountBookId: bookId } });
-    const number = "PAY-" + String(count + 1).padStart(5, "0");
+    const number = await this.seq.next(bookId, "PAY");
 
     const result = await this.prisma.$transaction(async (tx) => {
       const payment = await tx.supplierPayment.create({

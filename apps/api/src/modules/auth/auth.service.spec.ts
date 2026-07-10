@@ -2,6 +2,8 @@ import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import * as bcrypt from 'bcryptjs';
+const makeSeq = () => ({ next: jest.fn().mockResolvedValue('TEST-00001') }) as any;
+
 
 describe('AuthService', () => {
   let service: AuthService;

@@ -1,6 +1,9 @@
 import { Test } from '@nestjs/testing';
 import { GlService } from './gl.service';
 import { PrismaService } from '../../database/prisma.service';
+import { DocumentSequenceService } from '../../database/document-sequence.service';
+const makeSeq = () => ({ next: jest.fn().mockResolvedValue('TEST-00001') }) as any;
+
 
 describe('GlService', () => {
   let service: GlService;
@@ -14,7 +17,7 @@ describe('GlService', () => {
       taxCode: { findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([]), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     };
     const module = await Test.createTestingModule({
-      providers: [GlService, { provide: PrismaService, useValue: prisma }],
+      providers: [GlService, { provide: PrismaService, useValue: prisma }, { provide: DocumentSequenceService, useValue: makeSeq() }],
     }).compile();
     service = module.get(GlService);
   });

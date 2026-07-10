@@ -2,6 +2,9 @@ import { Test } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
 import { PostingService } from './posting.service';
 import { PrismaService } from '../../database/prisma.service';
+import { DocumentSequenceService } from '../../database/document-sequence.service';
+const makeSeq = () => ({ next: jest.fn().mockResolvedValue('TEST-00001') }) as any;
+
 
 describe('PostingService', () => {
   let svc: PostingService;
@@ -16,7 +19,7 @@ describe('PostingService', () => {
       supplierInvoice: { findUnique: jest.fn() },
     };
     const mod = await Test.createTestingModule({
-      providers: [PostingService, { provide: PrismaService, useValue: prisma }],
+      providers: [PostingService, { provide: PrismaService, useValue: prisma }, { provide: DocumentSequenceService, useValue: makeSeq() }],
     }).compile();
     svc = mod.get(PostingService);
   });

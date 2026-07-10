@@ -843,3 +843,15 @@ model AuditLog {
   @@index([accountBookId, entity, entityId])
   @@index([accountBookId, createdAt])
 }
+
+// --- Document sequence (race-safe number allocation) ---
+model DocumentSequence {
+  id            String   @id @default(uuid()) @db.Uuid
+  accountBookId String
+  prefix        String
+  nextValue     Int      @default(1)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([accountBookId, prefix])
+  @@map("document_sequence")
+}

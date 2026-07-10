@@ -1,6 +1,7 @@
 
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { DocumentSequenceService } from '../../database/document-sequence.service';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
 import { CreateCustomerInvoiceDto, UpdateCustomerInvoiceDto } from './dto/customer-invoice.dto';
 import { PostingService } from '../gl/posting.service';
@@ -11,6 +12,7 @@ export class ArService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly seq: DocumentSequenceService,
     private readonly posting: PostingService,
   ) {}
 
@@ -115,8 +117,7 @@ export class ArService {
     if (!cust || cust.accountBookId !== bookId) {
       throw new BadRequestException(`Customer ${dto.customerId} not found in this account book`);
     }
-    const count = await this.prisma.customerInvoice.count({ where: { accountBookId: bookId } });
-    const number = `INV-${String(count + 1).padStart(5, '0')}`;
+    const number = await this.seq.next(bookId, "INV");
 
     let subtotal = 0;
     let taxTotal = 0;
@@ -222,8 +223,7 @@ export class ArService {
     if (so.status === 'CLOSED' || so.status === 'CANCELLED') {
       throw new BadRequestException(`Sales order ${so.number} is ${so.status} and cannot be converted`);
     }
-    const count = await this.prisma.customerInvoice.count({ where: { accountBookId: bookId } });
-    const number = `INV-${String(count + 1).padStart(5, '0')}`;
+    const number = await this.seq.next(bookId, "INV");
     const today = new Date();
     const due = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
     const total = Number(so.total);

@@ -1,6 +1,9 @@
 import { Test } from '@nestjs/testing';
 import { StockService } from './stock.service';
 import { PrismaService } from '../../database/prisma.service';
+import { DocumentSequenceService } from '../../database/document-sequence.service';
+const makeSeq = () => ({ next: jest.fn().mockResolvedValue('TEST-00001') }) as any;
+
 
 describe('StockService', () => {
   let service: StockService;
@@ -9,7 +12,7 @@ describe('StockService', () => {
   beforeEach(async () => {
     prisma = { item: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() } };
     const module = await Test.createTestingModule({
-      providers: [StockService, { provide: PrismaService, useValue: prisma }],
+      providers: [StockService, { provide: PrismaService, useValue: prisma }, { provide: DocumentSequenceService, useValue: makeSeq() }],
     }).compile();
     service = module.get(StockService);
   });

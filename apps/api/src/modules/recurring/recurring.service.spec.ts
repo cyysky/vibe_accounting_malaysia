@@ -1,5 +1,7 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { RecurringService } from "./recurring.service";
+const makeSeq = () => ({ next: jest.fn().mockResolvedValue('TEST-00001') }) as any;
+
 
 describe("RecurringService", () => {
   function makePrisma() {

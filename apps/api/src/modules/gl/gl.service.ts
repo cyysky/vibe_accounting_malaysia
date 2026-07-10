@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { DocumentSequenceService } from '../../database/document-sequence.service';
 import { CreateAccountDto, UpdateAccountDto } from './dto/account.dto';
 import { CreateJournalDto } from './dto/journal.dto';
 import { CreateTaxCodeDto, UpdateTaxCodeDto } from './dto/tax-code.dto';
@@ -8,7 +9,7 @@ import { CreateFiscalYearDto, UpdateFiscalYearDto } from './dto/fiscal-year.dto'
 
 @Injectable()
 export class GlService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly seq: DocumentSequenceService) {}
 
   // --- Chart of accounts ---------------------------------------------------
   listAccounts(bookId?: string): Promise<Array<Record<string, unknown>>> {
@@ -114,8 +115,7 @@ export class GlService {
       throw new BadRequestException(`Fiscal year ${fiscalYear.year} is closed`);
     }
     // Number auto-generated: JV-####
-    const count = await this.prisma.journalEntry.count({ where: { accountBookId: bookId } });
-    const number = `JV-${String(count + 1).padStart(4, '0')}`;
+    const number = await this.seq.next(bookId, "JV", 4);
     const created = await this.prisma.journalEntry.create({
       data: {
         accountBookId: bookId,

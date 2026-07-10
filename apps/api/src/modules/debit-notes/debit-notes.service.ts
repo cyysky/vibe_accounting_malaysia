@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
+import { DocumentSequenceService } from "../../database/document-sequence.service";
 import { PostingService } from "../gl/posting.service";
 import { CreateDebitNoteDto, UpdateDebitNoteDto } from "./dto/debit-note.dto";
 
@@ -9,6 +10,7 @@ export class DebitNotesService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly seq: DocumentSequenceService,
     private readonly posting: PostingService,
   ) {}
 
@@ -72,8 +74,7 @@ export class DebitNotesService {
       }),
     );
     const total = +(subtotal + taxTotal).toFixed(2);
-    const count = await this.prisma.debitNote.count({ where: { accountBookId: bookId } });
-    const number = `DN-${String(count + 1).padStart(5, "0")}`;
+    const number = await this.seq.next(bookId, "DN");
 
     const created = await this.prisma.debitNote.create({
       data: {

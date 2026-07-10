@@ -1,5 +1,7 @@
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { BankAccountsService } from "./bank-accounts.service";
+const makeSeq = () => ({ next: jest.fn().mockResolvedValue('TEST-00001') }) as any;
+
 
 describe("BankAccountsService", () => {
   function makePrisma() {

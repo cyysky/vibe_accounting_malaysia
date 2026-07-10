@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { DocumentSequenceService } from '../../database/document-sequence.service';
 import { CreateSalesOrderDto, UpdateSalesOrderDto } from './dto/sales-order.dto';
 
 interface OrderLineInput {
@@ -23,7 +24,7 @@ function computeLineTotals(line: OrderLineInput, taxRate: number) {
 
 @Injectable()
 export class SalesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly seq: DocumentSequenceService) {}
 
   async listOrders(bookId: string, page = 1, pageSize = 50) {
     const skip = (Math.max(1, page) - 1) * Math.min(200, Math.max(1, pageSize));
@@ -57,8 +58,7 @@ export class SalesService {
     if (!cust || cust.accountBookId !== bookId) {
       throw new BadRequestException(`Customer ${dto.customerId} not found in this account book`);
     }
-    const count = await this.prisma.salesOrder.count({ where: { accountBookId: bookId } });
-    const number = `SO-${String(count + 1).padStart(5, '0')}`;
+    const number = await this.seq.next(bookId, "SO");
 
     // Compute totals from lines if provided
     const lines = dto.lines && dto.lines.length > 0 ? await this.prepareLines(bookId, dto.lines) : null;

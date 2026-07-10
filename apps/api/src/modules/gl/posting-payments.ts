@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../../database/prisma.service";
+import { DocumentSequenceService } from "../../database/document-sequence.service";
 
 /**
  * Auto-post customer / supplier payments to GL.
@@ -12,7 +13,7 @@ import { PrismaService } from "../../database/prisma.service";
 export class PaymentPostingService {
   private readonly logger = new Logger(PaymentPostingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly seq: DocumentSequenceService) {}
 
   private async accountId(bookId: string, code: string): Promise<string | null> {
     const a = await this.prisma.account.findUnique({
@@ -31,8 +32,7 @@ export class PaymentPostingService {
   }
 
   private async nextJournalNumber(bookId: string): Promise<string> {
-    const count = await this.prisma.journalEntry.count({ where: { accountBookId: bookId } });
-    return "JV-" + String(count + 1).padStart(4, "0");
+    return this.seq.next(bookId, "JV", 4);
   }
 
   async postCustomerPayment(paymentId: string): Promise<string | null> {

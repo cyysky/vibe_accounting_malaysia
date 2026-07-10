@@ -1,0 +1,23 @@
+
+> vibe-accounting-malaysia@0.1.0 test
+> npm --workspaces --if-present run test
+
+
+> @account/api@0.1.0 test
+> jest
+
+PASS src/modules/recurring/recurring.service.spec.ts (5.26 s)
+PASS src/modules/bank-accounts/bank-accounts.service.spec.ts (5.466 s)
+PASS src/modules/credit-notes/credit-notes.service.spec.ts (5.537 s)
+PASS src/modules/gl/posting.service.spec.ts
+PASS src/modules/gl/gl.service.spec.ts
+PASS src/modules/stock/stock.service.spec.ts
+PASS src/modules/einvoice/mappers/invoice-v1.1.mapper.spec.ts
+PASS src/modules/auth/auth.service.spec.ts
+PASS src/modules/ar/ar.service.spec.ts
+
+Test Suites: 9 passed, 9 total
+Tests:       36 passed, 36 total
+Snapshots:   0 total
+Time:        7.906 s
+Ran all test suites.

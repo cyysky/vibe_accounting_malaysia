@@ -2,180 +2,125 @@
 
 ## Stack
 
-| Layer        | Technology                                |
-| ------------ | ----------------------------------------- |
-| Database     | PostgreSQL 16 (alpine) — bind-mounted     |
-| ORM          | Prisma 5.22                               |
-| API          | NestJS 10 (TypeScript)                    |
-| Web          | Next.js 14 (App Router, TypeScript)       |
-| Reverse proxy| nginx 1.27                                |
-| Auth         | JWT (access + refresh), bcryptjs          |
-| e-Invoice    | node-forge (X.509 PKCS#7), UBL 2.1 JSON v1.1 |
-| Validation   | class-validator + zod (web)               |
+| Layer        | Technology                                       |
+| ------------ | ------------------------------------------------ |
+| Database     | PostgreSQL 16 (alpine) — bind-mounted            |
+| ORM          | Prisma 5.22                                      |
+| API          | NestJS 10 (TypeScript)                           |
+| Web          | Next.js 14 (App Router, TypeScript)              |
+| Reverse proxy| nginx 1.27                                       |
+| Auth         | JWT (access + refresh), bcryptjs                 |
+| e-Invoice    | node-forge (X.509 PKCS#7), UBL 2.1 JSON v1.1     |
+| Validation   | class-validator (api) + zod (web)                |
+| State cache  | TanStack Query (web)                              |
 
+## Modules
+
+Vibe Accounting Malaysia is organised as a flat set of NestJS modules
+under `apps/api/src/modules/`.  Each module owns its DTOs, controller,
+service, and (optionally) a persistence model.
+
+| Module            | Path                              | Responsibility                                                  |
+| ----------------- | --------------------------------- | -------------------------------------------------------------- |
+| `auth`            | `modules/auth`                    | JWT login, bcrypt, refresh tokens, profile                     |
+| `account-books`   | `modules/account-books`           | Multi-company support                                          |
+| `gl`              | `modules/gl`                      | Chart of accounts, journals, tax codes, fiscal years, posting  |
+| `ar`              | `modules/ar`                      | Customers, customer invoices (with auto-GL post)               |
+| `ap`              | `modules/ap`                      | Suppliers, supplier bills (with auto-GL post)                  |
+| `sales`           | `modules/sales`                   | Sales orders + convert-to-invoice flow                         |
+| `purchase`        | `modules/purchase`                | Purchase orders                                                 |
+| `stock`           | `modules/stock`                   | Items + stock movements + low-stock alerts                     |
+| `dashboard`       | `modules/dashboard`              | KPI summary + quick actions                                     |
+| `reports`         | `modules/reports`                 | P&L, balance sheet, AR/AP aging, general ledger                |
+| `einvoice`        | `modules/einvoice`                | MyInvois / LHDNM e-invoice submission + lifecycle              |
+| `payments`        | `modules/payments`                | Customer & supplier payments (with auto-GL post)              |
+| `credit-notes`    | `modules/credit-notes`            | Refund / sales return documents                                |
+| `debit-notes`     | `modules/debit-notes`             | Additional supplier charges                                    |
+| `bank-accounts`   | `modules/bank-accounts`           | Cash / bank accounts linked to GL                              |
+| `recurring`       | `modules/recurring`               | Recurring invoice templates (weekly/monthly/quarterly/yearly) |
+| `audit-log`       | `modules/audit-log`               | Global entity-level audit trail                                |
+| `health`          | `modules/health`                  | Container / app liveness                                       |
 
 ## Posting to GL
 
-When an invoice or bill is created the API auto-posts the corresponding
-journal entry:
+When a document is created, the API auto-posts the corresponding journal
+entry.  Best-effort: missing GL accounts produce a warning log instead of
+rolling back the source transaction, so the system keeps working on
+simplified charts of accounts.  Journals can only be posted to an open
+fiscal year.
 
-| Source                    | DR                | CR                  |
-| ------------------------- | ----------------- | ------------------- |
-| Customer invoice          | Accounts Receivable (1200) | Sales Revenue (4000) + SST Payable (2100) |
-| Supplier bill             | Purchases / Inventory (5000) + Input Tax (2110) | Accounts Payable (2000) |
+| Source                  | DR                                          | CR                                          |
+| ----------------------- | ------------------------------------------- | ------------------------------------------- |
+| Customer invoice        | Accounts Receivable (1200)                  | Sales Revenue (4000) + SST Payable (2100)   |
+| Supplier bill           | Purchases (5000) + Input Tax (2110)         | Accounts Payable (2000)                     |
+| Customer payment        | Bank / Cash (1100 / 1000)                   | Accounts Receivable (1200)                  |
+| Supplier payment        | Accounts Payable (2000)                     | Bank / Cash (1100 / 1000)                   |
+| Credit note             | Sales Returns (4100) + SST reversal (2100)  | Accounts Receivable (1200)                  |
+| Debit note              | Purchases (5000) + Input Tax (2110)         | Accounts Payable (2000)                     |
 
-Posting is performed by `PostingService` and is best-effort: missing GL
-accounts produce a warning log instead of rolling back the source
-transaction, so the system keeps working on simplified charts of
-accounts.  Journals can only be posted to an open fiscal year, which
-the bootstrap seed creates for the current and next year.
+Sales Returns is typically account `4100`; the system falls back to
+`4000` (Sales) if `4100` is not present.
+
+## Cross-module wiring
+
+- `RecurringModule` imports `ArModule` and calls `ArService.createInvoice`
+  to materialise a real customer invoice on each `run`.
+- `CreditNotesModule` and `DebitNotesModule` both import `GlModule` to
+  trigger automatic GL posting via `PostingService`.
+- `AuditLogModule` is declared global so any service can inject
+  `AuditLogService` (fire-and-forget audit logging that never throws).
+- `BankAccountsModule` is independent; its `glAccountCode` references a
+  row in the `Account` chart-of-accounts so that payments can resolve
+  the correct bank GL account at posting time.
+- `EinvoiceModule` pulls supplier MSIC + address from the
+  `AccountBook` (industryCode), producing a fully-populated UBL 2.1
+  document.
+
+## Database
+
+The Prisma schema models the entire accounting domain.  Most entities
+are scoped to an `AccountBook` for multi-tenancy.  All Decimal columns
+use `@db.Decimal(18, 2)` (or `(18, 4)` for quantity/uom) to avoid
+floating-point drift.
+
+Key models:
+
+- `AccountBook` (company), `User` (with `Role` enum)
+- `Account`, `TaxCode`, `FiscalYear`, `JournalEntry`, `JournalLine`
+- `Customer`, `Supplier`, `Item`, `CustomerInvoice`, `CustomerInvoiceLine`,
+  `SupplierInvoice`, `SupplierInvoiceLine`
+- `SalesOrder`, `PurchaseOrder`
+- `CustomerPayment`, `CustomerPaymentApplication`,
+  `SupplierPayment`, `SupplierPaymentApplication`
+- `CreditNote`, `CreditNoteLine`, `DebitNote`, `DebitNoteLine`
+- `RecurringInvoice`, `RecurringInvoiceLine`
+- `BankAccount`
+- `StockMovement`
+- `EinvoiceConfig`, `EinvoiceSubmission`
+- `AuditLog`
 
 ## Container layout
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                      HOST :8080 (nginx)                          │
-│                         (only published port)                   │
-└──────────────────┬─────────────────────────────────┬────────────┘
-                   │ /api/*                          │ /, /dashboard, …
-                   ▼                                 ▼
-        ┌─────────────────────┐             ┌────────────────────┐
-        │ vibe-accounting-    │             │ vibe-accounting-   │
-        │ malaysia-api        │             │ malaysia-web       │
-        │ (NestJS, :3000)     │             │ (Next.js, :3000)   │
-        └──────────┬──────────┘             └────────────────────┘
-                   │
-                   ▼
-        ┌─────────────────────┐
-        │ vibe-accounting-    │
-        │ malaysia-postgres   │
-        │ (Postgres 16, :5432)│   ◄─ ONLY on internal network
-        └─────────────────────┘
+```text
+nginx :8080  ──►  api :3000  ──►  postgres (internal)
+                            └─►  redis (internal; not used yet)
 ```
 
-All data services (Postgres) live on the `internal` Docker network only —
-**no host port is published**.  The only host-mapped port is **8080** on
-nginx, which proxies `/api/*` to the API container and everything else to
-the web container.
+`docker compose -f infra/docker-compose.yml up -d --build` starts the
+whole stack.  Postgres and Redis live on the internal Docker network;
+nginx is the only published port.
 
-This keeps the platform isolated from any other Postgres already running
-on this host.  To run a one-off migration, attach a sidecar container to
-the `infra_internal` network (see `scripts/probe-myinvois.mjs` for the
-network pattern).
+## Audit log
 
-## Database schema (Prisma)
+`AuditLogService` records `CREATE / UPDATE / DELETE / POST / SUBMIT /
+CANCEL / POLL / PAY` events.  Records are written best-effort so a
+database failure never breaks the originating transaction.  The web
+side exposes them under **Activity** in the sidebar.
 
-Core entities (see `apps/api/prisma/schema.prisma` for the canonical
-definition):
+## Recurring invoices
 
-- **AccountBook** — a logical company within the platform.  Holds TIN,
-  BRN, MSIC industry code, base currency, fiscal year start month.
-- **User** — email + bcrypt password hash, role (OWNER/ADMIN/ACCOUNTANT/
-  CLERK/VIEWER), foreign key to AccountBook.
-- **Account** — chart-of-accounts row, scoped to AccountBook.  Supports
-  parent/child tree.
-- **TaxCode** — SST/GST codes, scoped to AccountBook, rate as decimal.
-- **FiscalYear** — fiscal year boundary tracker, scoped to AccountBook.
-- **JournalEntry / JournalLine** — double-entry journal vouchers.  Enforces
-  totalDebit == totalCredit at the service layer.
-- **Customer / Supplier** — AR/AP counterparties with TIN, BRN, address.
-- **Item** — stock items with cost, price, on-hand, reorder level,
-  MyInvois classification code.
-- **CustomerInvoice / CustomerInvoiceLine** — AR invoices, computes
-  subtotal/tax/total at create time, maintains customer.outstanding.
-- **SupplierInvoice / SupplierInvoiceLine** — AP bills, mirrors AR.
-- **SalesOrder / PurchaseOrder** — pre-invoice documents.
-- **EinvoiceConfig** — per-(AccountBook, environment) MyInvois
-  credentials and certificate path.
-- **EinvoiceSubmission** — every submission attempt with full payload,
-  MyInvois response, status code, attempts, timestamps.
-
-Unique compound keys are used per-AccountBook (`accountBookId_code` on
-Account/Customer/Supplier/Item/TaxCode, `accountBookId_environment` on
-EinvoiceConfig, etc.).
-
-## API layering
-
-```
-HTTP request
-   │
-   ▼
-Controller  — REST shape, Swagger annotations, DTO validation
-   │
-   ▼
-Service     — Business logic, transactions, throws domain errors
-   │
-   ▼
-PrismaService — Postgres queries
-```
-
-All controllers declare `@ApiTags`, `@ApiBearerAuth`, and `@UseGuards(JwtAuthGuard)`.
-The `CurrentUser` decorator extracts the JWT-decoded user; account-book-scoped
-endpoints require `user.accountBookId`.
-
-Global `ValidationPipe` enforces DTO validation (`whitelist`,
-`forbidNonWhitelisted`, `transform`).
-
-`TransformInterceptor` wraps every response in `{ data, meta? }`.
-
-## Frontend layout
-
-Next.js App Router under `apps/web/app`.  Shared components live in
-`apps/web/components/`:
-
-- `ui/Button.tsx` — primary/secondary/danger/ghost variants with loading spinner
-- `ui/DataTable.tsx` — generic typed table with loading/empty states
-- `ui/Modal.tsx` — accessible modal with ESC close and scroll lock
-- `ui/Form.tsx` — Field, Input, Select, Textarea, Badge, EinvoiceStatusBadge
-
-`lib/api.ts` is a hand-rolled typed HTTP client.  It unwraps the
-`{ data, meta? }` envelope, persists JWT and user to localStorage, and
-exposes typed methods per endpoint.
-
-The `ProtectedShell` component redirects unauthenticated users to `/login`.
-
-## e-Invoice (MyInvois) flow
-
-```
-Customer Invoice (status: ISSUED)
-       │
-       ▼  POST /api/einvoice/invoices/:id/submit
-   EinvoiceService.submitInvoice
-       │
-       ├─► buildUblInvoice   (mapper: invoice+lines → UBL 2.1 JSON v1.1)
-       ├─► JsonSigner.signP12 (X.509 PKCS#7, node-forge)
-       └─► MyInvoisClient.submitDocuments
-              │
-              ▼
-         preprod-api.myinvois.hasil.gov.my  (or api.myinvois.hasil.gov.my)
-              │
-              ▼
-         EinvoiceSubmission (documentStatus: 1=submitted)
-              │
-              ▼  POST /api/einvoice/submissions/:id/poll
-         MyInvoisClient.searchDocuments
-              │
-              ▼
-         EinvoiceSubmission (documentStatus: 2=valid | 3=invalid | 4=cancelled)
-         CustomerInvoice.einvoiceStatus updated
-```
-
-For local dev set `DISABLE_SIGNING=1` to substitute a placeholder
-signature; the MyInvois SANDBOX will still reject it but the rest of the
-flow is exercised.
-
-## Data persistence
-
-- Postgres data files: `infra/data/postgres/` on the host, bind-mounted to
-  `/var/lib/postgresql/data` inside the container.  Survives
-  `docker compose down` (no `-v`).
-- App uploads: `infra/data/uploads/` → `/var/lib/vibe/uploads`
-- App backups: `infra/data/backups/` → `/var/lib/vibe/backups`
-
-Use `scripts/backup.mjs` / `scripts/restore.mjs` to snapshot Postgres +
-upload dir as a single tarball under `infra/data/backups/`.
-
-## Local development
-
-`docs/development.md` covers local iteration, tests, and the type-safety
-guarantees enforced across the workspace.
+A `RecurringInvoice` is a template (customer + frequency + lines).  A
+cron-style endpoint `POST /api/recurring/run-due` generates a real
+customer invoice for every template whose `nextRunDate <= today` and
+advances the date by the configured frequency.  Single-template
+materialisation: `POST /api/recurring/:id/run`.

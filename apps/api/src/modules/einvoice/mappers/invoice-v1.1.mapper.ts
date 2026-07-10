@@ -1,12 +1,13 @@
 /**
  * MyInvois UBL 2.1 JSON Invoice (v1.1) mapper.
  *
- * Maps a CustomerInvoice + its lines + customer + taxCodes into the canonical
- * UBL 2.1 JSON shape expected by the MyInvois documentSubmissions API.
- *
  * Reference: https://sdk.myinvois.hasil.gov.my/ (UBL 2.1 JSON Spec, v1.1)
+ *
+ * Supports documentType: invoice | credit-note | debit-note | refund-note,
+ * self-billed variants, supplier/customer full address + contact, MSIC code,
+ * allowance/charge line items.
  */
-import type { CustomerInvoice, Customer, Item, TaxCode } from '@prisma/client';
+import type { CustomerInvoice, Customer, Item, TaxCode } from "@prisma/client";
 
 export type UblDocument = Record<string, unknown>;
 
@@ -25,130 +26,205 @@ interface MapperLine {
 export interface MapperContext {
   invoice: CustomerInvoice & { lines: MapperLine[] };
   customer: Customer;
-  supplier: { tin: string; brn?: string | null; name: string };
+  supplier: {
+    tin: string;
+    brn?: string | null;
+    name: string;
+    addressLine1?: string | null;
+    addressLine2?: string | null;
+    city?: string | null;
+    postalCode?: string | null;
+    state?: string | null;
+    country?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    msic?: string | null;
+  };
   taxCodes: Map<string, TaxCode>;
-  documentType?: 'invoice' | 'credit-note' | 'debit-note' | 'refund-note';
-  version?: '1.0' | '1.1';
-  format?: 'JSON' | 'XML';
+  documentType?:
+    | "invoice"
+    | "credit-note"
+    | "debit-note"
+    | "refund-note"
+    | "self-billed-invoice"
+    | "self-billed-credit-note"
+    | "self-billed-debit-note";
+  version?: "1.0" | "1.1";
+  format?: "JSON" | "XML";
+  billingReferenceId?: string;
 }
 
-const MSIC = '00000';
-const COUNTRY_MY = 'MYS';
-const CURRENCY_DEFAULT = 'MYR';
+const COUNTRY_MY = "MYS";
+const CURRENCY_DEFAULT = "MYR";
+
+const DOCUMENT_TYPE_CODE: Record<NonNullable<MapperContext["documentType"]>, string> = {
+  "invoice": "01",
+  "credit-note": "02",
+  "debit-note": "03",
+  "refund-note": "04",
+  "self-billed-invoice": "11",
+  "self-billed-credit-note": "12",
+  "self-billed-debit-note": "13",
+};
 
 export function buildUblInvoice(ctx: MapperContext): UblDocument {
-  const v = ctx.version ?? '1.1';
+  const v = ctx.version ?? "1.1";
+  const dt = ctx.documentType ?? "invoice";
+  const code = DOCUMENT_TYPE_CODE[dt];
+  const currency = ctx.invoice.currency || CURRENCY_DEFAULT;
+
+  if (!ctx.supplier.tin) {
+    throw new Error("Supplier TIN is required for MyInvois submission");
+  }
+
+  const document: UblDocument = {
+    ID: [{ _: ctx.invoice.number }],
+    IssueDate: [{ _: ctx.invoice.date.toISOString().slice(0, 10) }],
+    IssueTime: [{ _: ctx.invoice.date.toISOString().slice(11, 19) }],
+    DueDate: [{ _: ctx.invoice.dueDate.toISOString().slice(0, 10) }],
+    InvoiceTypeCode: [{ _: code, listVersionID: v }],
+    DocumentCurrencyCode: [{ _: currency }],
+    TaxCurrencyCode: [{ _: currency }],
+  };
+
+  if (ctx.billingReferenceId) {
+    (document as Record<string, unknown>).BillingReference = [
+      { InvoiceDocumentReference: [{ ID: [{ _: ctx.billingReferenceId }] }] },
+    ];
+  }
+
+  (document as Record<string, unknown>).AccountingSupplierParty = [buildSupplier(ctx.supplier)];
+  (document as Record<string, unknown>).AccountingCustomerParty = [buildCustomer(ctx.customer)];
+  (document as Record<string, unknown>).InvoiceLine = ctx.invoice.lines.map((l) =>
+    buildLine(l, ctx.taxCodes, currency),
+  );
+  (document as Record<string, unknown>).LegalMonetaryTotal = [
+    {
+      LineExtensionAmount: [{ _: toString(ctx.invoice.subtotal), currencyID: currency }],
+      TaxExclusiveAmount: [{ _: toString(ctx.invoice.subtotal), currencyID: currency }],
+      TaxInclusiveAmount: [{ _: toString(ctx.invoice.total), currencyID: currency }],
+      AllowanceTotalAmount: [{ _: "0.00", currencyID: currency }],
+      ChargeTotalAmount: [{ _: "0.00", currencyID: currency }],
+      PayableAmount: [{ _: toString(ctx.invoice.total), currencyID: currency }],
+    },
+  ];
+  (document as Record<string, unknown>).TaxTotal = [
+    {
+      TaxAmount: [{ _: toString(ctx.invoice.taxTotal), currencyID: currency }],
+      TaxSubtotal: groupTaxSubtotals(ctx.invoice.lines, ctx.taxCodes, currency),
+    },
+  ];
+
   return {
-    _D: 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
-    _A: 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2',
-    _B: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2',
-    Invoice: [
-      {
-        ID: [{ _: ctx.invoice.number }],
-        IssueDate: [{ _: ctx.invoice.date.toISOString().slice(0, 10) }],
-        IssueTime: [{ _: ctx.invoice.date.toISOString().slice(11, 19) }],
-        DueDate: [{ _: ctx.invoice.dueDate.toISOString().slice(0, 10) }],
-        InvoiceTypeCode: [{ _: '01', listVersionID: v }],
-        DocumentCurrencyCode: [{ _: ctx.invoice.currency ?? CURRENCY_DEFAULT }],
-        TaxCurrencyCode: [{ _: ctx.invoice.currency ?? CURRENCY_DEFAULT }],
-        AccountingSupplierParty: [buildSupplier(ctx.supplier)],
-        AccountingCustomerParty: [buildCustomer(ctx.customer)],
-        InvoiceLine: ctx.invoice.lines.map((l) => buildLine(l, ctx.taxCodes)),
-        LegalMonetaryTotal: [
-          {
-            LineExtensionAmount: [{ _: toString(ctx.invoice.subtotal), currencyID: ctx.invoice.currency }],
-            TaxExclusiveAmount: [{ _: toString(ctx.invoice.subtotal), currencyID: ctx.invoice.currency }],
-            TaxInclusiveAmount: [{ _: toString(ctx.invoice.total), currencyID: ctx.invoice.currency }],
-            AllowanceTotalAmount: [{ _: '0.00', currencyID: ctx.invoice.currency }],
-            ChargeTotalAmount: [{ _: '0.00', currencyID: ctx.invoice.currency }],
-            PayableAmount: [{ _: toString(ctx.invoice.total), currencyID: ctx.invoice.currency }],
-          },
-        ],
-        TaxTotal: [
-          {
-            TaxAmount: [{ _: toString(ctx.invoice.taxTotal), currencyID: ctx.invoice.currency }],
-            TaxSubtotal: groupTaxSubtotals(ctx.invoice.lines, ctx.taxCodes, ctx.invoice.currency),
-          },
-        ],
-      },
-    ],
+    _D: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
+    _A: "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+    _B: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+    Invoice: [document],
   };
 }
 
-function buildSupplier(s: { tin: string; brn?: string | null; name: string }): UblDocument {
-  return {
-    Party: [
+function buildSupplier(s: MapperContext["supplier"]): UblDocument {
+  const addr: UblDocument = {
+    CityName: [{ _: s.city ?? "NA" }],
+    PostalZone: [{ _: s.postalCode ?? "00000" }],
+    CountrySubentityCode: [{ _: "17" }],
+    Country: [{ IdentificationCode: [{ _: s.country ?? COUNTRY_MY }] }],
+  };
+  if (s.addressLine1) (addr as Record<string, unknown>).Street = [{ _: s.addressLine1 }];
+  if (s.addressLine2) {
+    const existing = (addr as Record<string, unknown>).Street as Array<Record<string, unknown>> | undefined;
+    if (existing) {
+      existing[0] = { ...existing[0], Line: [{ _: s.addressLine2 }] };
+    } else {
+      (addr as Record<string, unknown>).AdditionalStreet = [{ _: s.addressLine2 }];
+    }
+  }
+
+  const party: UblDocument = {
+    IndustryClassificationCode: [{ _: s.msic ?? "00000", name: s.msic ? "MSIC" : "Generic" }],
+    PartyIdentification: [
+      s.brn ? { ID: [{ _: s.brn, schemeID: "BRN" }] } : { ID: [{ _: s.tin, schemeID: "TIN" }] },
+    ],
+    PartyName: [{ Name: [{ _: s.name }] }],
+    PostalAddress: [addr],
+    PartyTaxScheme: [
       {
-        IndustryClassificationCode: [{ _: MSIC, name: 'Generic' }],
-        PartyIdentification: [{ ID: [{ _: s.brn ?? '', schemeID: 'BRN' }] }],
-        PartyName: [{ Name: [{ _: s.name }] }],
-        PostalAddress: [
-          {
-            CityName: [{ _: 'NA' }],
-            PostalZone: [{ _: '00000' }],
-            CountrySubentityCode: [{ _: '17' }],
-            Country: [{ IdentificationCode: [{ _: COUNTRY_MY }] }],
-          },
-        ],
-        PartyTaxScheme: [
-          {
-            RegistrationName: [{ _: s.name }],
-            CompanyID: [{ _: s.tin, schemeID: 'TIN' }],
-            TaxScheme: [{ ID: [{ _: 'VAT', schemeID: 'UN/ECE 5153', schemeAgencyID: '6' }] }],
-          },
-        ],
-        PartyLegalEntity: [
-          {
-            RegistrationName: [{ _: s.name }],
-            CompanyID: [{ _: s.brn ?? '', schemeID: 'BRN' }],
-          },
-        ],
-        Contact: [{ ElectronicMail: [{ _: 'ap@example.com' }] }],
+        RegistrationName: [{ _: s.name }],
+        CompanyID: [{ _: s.tin, schemeID: "TIN" }],
+        TaxScheme: [{ ID: [{ _: "VAT", schemeID: "UN/ECE 5153", schemeAgencyID: "6" }] }],
+      },
+    ],
+    PartyLegalEntity: [
+      {
+        RegistrationName: [{ _: s.name }],
+        CompanyID: [{ _: s.brn ?? s.tin, schemeID: s.brn ? "BRN" : "TIN" }],
       },
     ],
   };
+
+  if (s.email || s.phone) {
+    const contact: UblDocument = {};
+    if (s.email) (contact as Record<string, unknown>).ElectronicMail = [{ _: s.email }];
+    if (s.phone) (contact as Record<string, unknown>).Telephone = [{ _: s.phone }];
+    (party as Record<string, unknown>).Contact = [contact];
+  }
+
+  return { Party: [party] };
 }
 
 function buildCustomer(c: Customer): UblDocument {
-  return {
-    Party: [
+  const addr: UblDocument = {
+    CityName: [{ _: c.city ?? "NA" }],
+    PostalZone: [{ _: c.postalCode ?? "00000" }],
+    CountrySubentityCode: [{ _: c.state ?? "17" }],
+    Country: [{ IdentificationCode: [{ _: c.country ?? COUNTRY_MY }] }],
+  };
+  if (c.addressLine1) (addr as Record<string, unknown>).Street = [{ _: c.addressLine1 }];
+  if (c.addressLine2) {
+    const existing = (addr as Record<string, unknown>).Street as Array<Record<string, unknown>> | undefined;
+    if (existing) {
+      existing[0] = { ...existing[0], Line: [{ _: c.addressLine2 }] };
+    } else {
+      (addr as Record<string, unknown>).AdditionalStreet = [{ _: c.addressLine2 }];
+    }
+  }
+
+  const idScheme = c.taxId ? "TIN" : c.brn ? "BRN" : "TIN";
+  const idValue = c.taxId ?? c.brn ?? "";
+
+  const party: UblDocument = {
+    PartyIdentification: idValue ? [{ ID: [{ _: idValue, schemeID: idScheme }] }] : [],
+    PartyName: [{ Name: [{ _: c.name }] }],
+    PostalAddress: [addr],
+    PartyLegalEntity: [
       {
-        PartyIdentification: c.taxId
-          ? [{ ID: [{ _: c.taxId, schemeID: 'TIN' }] }]
-          : c.brn
-            ? [{ ID: [{ _: c.brn, schemeID: 'BRN' }] }]
-            : [],
-        PartyName: [{ Name: [{ _: c.name }] }],
-        PostalAddress: [
-          {
-            CityName: [{ _: c.city ?? 'NA' }],
-            PostalZone: [{ _: c.postalCode ?? '00000' }],
-            CountrySubentityCode: [{ _: '17' }],
-            Country: [{ IdentificationCode: [{ _: c.country ?? COUNTRY_MY }] }],
-          },
-        ],
-        PartyTaxScheme: c.taxId
-          ? [
-              {
-                RegistrationName: [{ _: c.name }],
-                CompanyID: [{ _: c.taxId, schemeID: 'TIN' }],
-                TaxScheme: [{ ID: [{ _: 'VAT', schemeID: 'UN/ECE 5153', schemeAgencyID: '6' }] }],
-              },
-            ]
-          : [],
-        PartyLegalEntity: [
-          {
-            RegistrationName: [{ _: c.name }],
-            CompanyID: [{ _: c.brn ?? c.taxId ?? '', schemeID: c.brn ? 'BRN' : 'TIN' }],
-          },
-        ],
-        Contact: c.email ? [{ ElectronicMail: [{ _: c.email }] }] : [],
+        RegistrationName: [{ _: c.name }],
+        CompanyID: [{ _: idValue, schemeID: idScheme }],
       },
     ],
   };
+
+  if (c.taxId) {
+    (party as Record<string, unknown>).PartyTaxScheme = [
+      {
+        RegistrationName: [{ _: c.name }],
+        CompanyID: [{ _: c.taxId, schemeID: "TIN" }],
+        TaxScheme: [{ ID: [{ _: "VAT", schemeID: "UN/ECE 5153", schemeAgencyID: "6" }] }],
+      },
+    ];
+  }
+
+  if (c.email || c.phone) {
+    const contact: UblDocument = {};
+    if (c.email) (contact as Record<string, unknown>).ElectronicMail = [{ _: c.email }];
+    if (c.phone) (contact as Record<string, unknown>).Telephone = [{ _: c.phone }];
+    (party as Record<string, unknown>).Contact = [contact];
+  }
+
+  return { Party: [party] };
 }
 
-function buildLine(line: MapperLine, taxCodes: Map<string, TaxCode>): UblDocument {
+function buildLine(line: MapperLine, taxCodes: Map<string, TaxCode>, currency: string): UblDocument {
   const qty = Number(line.quantity);
   const price = Number(line.unitPrice);
   const discount = Number(line.discount ?? 0);
@@ -159,38 +235,47 @@ function buildLine(line: MapperLine, taxCodes: Map<string, TaxCode>): UblDocumen
 
   const out: UblDocument = {
     ID: [{ _: String(line.lineNo) }],
-    InvoicedQuantity: [{ _: String(qty), unitCode: line.item?.uom ?? 'C62' }],
-    LineExtensionAmount: [{ _: toString(lineSub), currencyID: 'MYR' }],
+    InvoicedQuantity: [{ _: toString(qty, 4), unitCode: line.item?.uom ?? "C62" }],
+    LineExtensionAmount: [{ _: toString(lineSub), currencyID: currency }],
     Item: [
       {
         Description: [{ _: line.description }],
         Name: [{ _: line.item?.name ?? line.description }],
         CommodityClassification: line.item?.classification
-          ? [{ CommodityCode: [{ _: line.item.classification, listID: 'CLASS' }] }]
+          ? [{ CommodityCode: [{ _: line.item.classification, listID: "CLASS" }] }]
           : [],
       },
     ],
     Price: [
       {
-        PriceAmount: [{ _: toString(price), currencyID: 'MYR' }],
+        PriceAmount: [{ _: toString(price), currencyID: currency }],
       },
     ],
   };
-  if (tc) {
-    (out as Record<string, unknown[]>)['TaxTotal'] = [
+  if (discount > 0) {
+    (out as Record<string, unknown[]>).AllowanceCharge = [
       {
-        TaxAmount: [{ _: toString(taxAmount), currencyID: 'MYR' }],
-        RoundingAmount: [{ _: toString(lineTotal), currencyID: 'MYR' }],
+        ChargeIndicator: [{ _: false }],
+        AllowanceChargeReason: [{ _: "Line discount" }],
+        Amount: [{ _: toString(discount), currencyID: currency }],
+      },
+    ];
+  }
+  if (tc) {
+    (out as Record<string, unknown[]>)["TaxTotal"] = [
+      {
+        TaxAmount: [{ _: toString(taxAmount), currencyID: currency }],
+        RoundingAmount: [{ _: toString(lineTotal), currencyID: currency }],
         TaxSubtotal: [
           {
-            TaxableAmount: [{ _: toString(lineSub), currencyID: 'MYR' }],
-            TaxAmount: [{ _: toString(taxAmount), currencyID: 'MYR' }],
+            TaxableAmount: [{ _: toString(lineSub), currencyID: currency }],
+            TaxAmount: [{ _: toString(taxAmount), currencyID: currency }],
             TaxCategory: [
               {
                 ID: [{ _: tc.code }],
                 Name: [{ _: tc.name }],
                 Percent: [{ _: String(Number(tc.rate) * 100) }],
-                TaxScheme: [{ ID: [{ _: 'VAT', schemeID: 'UN/ECE 5153', schemeAgencyID: '6' }] }],
+                TaxScheme: [{ ID: [{ _: "VAT", schemeID: "UN/ECE 5153", schemeAgencyID: "6" }] }],
               },
             ],
           },
@@ -201,11 +286,7 @@ function buildLine(line: MapperLine, taxCodes: Map<string, TaxCode>): UblDocumen
   return out;
 }
 
-function groupTaxSubtotals(
-  lines: MapperLine[],
-  taxCodes: Map<string, TaxCode>,
-  currency: string,
-): UblDocument[] {
+function groupTaxSubtotals(lines: MapperLine[], taxCodes: Map<string, TaxCode>, currency: string): UblDocument[] {
   const buckets = new Map<string, { taxable: number; tax: number; tc: TaxCode }>();
   for (const l of lines) {
     if (!l.taxCodeId) continue;
@@ -226,12 +307,12 @@ function groupTaxSubtotals(
         ID: [{ _: b.tc.code }],
         Name: [{ _: b.tc.name }],
         Percent: [{ _: String(Number(b.tc.rate) * 100) }],
-        TaxScheme: [{ ID: [{ _: 'VAT', schemeID: 'UN/ECE 5153', schemeAgencyID: '6' }] }],
+        TaxScheme: [{ ID: [{ _: "VAT", schemeID: "UN/ECE 5153", schemeAgencyID: "6" }] }],
       },
     ],
   }));
 }
 
-function toString(n: unknown): string {
-  return Number(n ?? 0).toFixed(2);
+function toString(n: unknown, fractionDigits = 2): string {
+  return Number(n ?? 0).toFixed(fractionDigits);
 }

@@ -1,0 +1,87 @@
+
+=== health ===
+  ✓ GET /health
+
+=== login ===
+  ✓ POST /api/auth/login
+
+=== dashboard ===
+  ✓ GET /api/dashboard/summary
+
+=== chart of accounts ===
+  ✓ GET /api/gl/accounts
+
+=== customer CRUD ===
+  ✓ POST /api/ar/customers
+  ✓ PUT /api/ar/customers/:id
+  ✓ DELETE /api/ar/customers/:id
+
+=== tax codes CRUD ===
+  ✓ GET /api/gl/tax-codes
+  ✓ POST /api/gl/tax-codes
+  ✓ DELETE /api/gl/tax-codes/:id
+
+=== fiscal years ===
+  ✓ GET /api/gl/fiscal-years
+
+=== invoice + auto-GL-post ===
+  ✓ POST /api/ar/customers
+  ✓ POST /api/ar/invoices
+  ✓ GET /api/gl/journals
+  → auto-posted JV JV-0014
+
+=== reports ===
+  ✓ GET /api/reports/pnl
+  ✓ GET /api/reports/balance-sheet
+
+=== items ===
+  ✓ GET /api/stock/items
+
+=== einvoice ===
+  ✓ GET /api/einvoice/configs
+  ✓ GET /api/einvoice/submissions
+  ✓ POST /api/einvoice/submissions/probe-id/cancel (404 expected)
+
+=== payments - customer receipt + GL post ===
+  ✓ GET /api/ar/customers
+  ✓ POST /api/ar/invoices
+  ✓ POST /api/ar/payments
+  -> posted receipt RCP-00003
+  ✓ GET /api/ar/payments
+
+=== credit notes ===
+  ✓ POST /api/ar/credit-notes
+  -> created credit note CN-00001
+  ✓ GET /api/ar/credit-notes
+
+=== debit notes ===
+  ✓ GET /api/ap/suppliers
+  ✓ POST /api/ap/debit-notes
+  -> created debit note DN-00001
+  ✓ GET /api/ap/debit-notes
+
+=== bank accounts ===
+  ✓ POST /api/bank-accounts
+  ✓ DELETE /api/bank-accounts/:id
+  ✓ GET /api/bank-accounts
+
+=== recurring templates ===
+  ✓ POST /api/recurring
+  ✓ DELETE /api/recurring/:id
+  ✓ GET /api/recurring
+  ✓ POST /api/recurring/run-due
+
+=== audit log ===
+  ✓ GET /api/audit-log
+
+=== stock movements ===
+  ✓ GET /api/stock/items
+  ✓ POST /api/stock/movements
+  ✓ GET /api/stock/movements
+
+=== reports - aging + GL ===
+  ✓ GET /api/reports/ar-aging
+  ✓ GET /api/reports/ap-aging
+  ✓ GET /api/reports/general-ledger
+
+[smoke] all checks passed ✓

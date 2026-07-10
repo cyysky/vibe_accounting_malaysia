@@ -13,31 +13,39 @@ datasource db {
 
 // --- Account book (a logical company within the platform) ---
 model AccountBook {
-  id                 String       @id @default(uuid())
-  code               String       @unique
-  name               String
-  baseCurrency       String       @default("MYR")
-  fiscalYearStartMonth Int        @default(1)
-  tin                String?      // LHDNM Tax Identification Number
-  brn                String?      // Business Registration Number
-  industryCode       String?      // MSIC code
-  active             Boolean      @default(true)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
-  users              User[]
-  accounts           Account[]
-  customers          Customer[]
-  suppliers          Supplier[]
-  items              Item[]
-  customerInvoices   CustomerInvoice[]
-  supplierInvoices   SupplierInvoice[]
-  salesOrders        SalesOrder[]
-  purchaseOrders     PurchaseOrder[]
-  journals           JournalEntry[]
-  fiscalYears        FiscalYear[]
-  taxCodes           TaxCode[]
-  einvoiceConfigs    EinvoiceConfig[]
-  einvoiceSubmissions EinvoiceSubmission[]
+  id                   String               @id @default(uuid())
+  code                 String               @unique
+  name                 String
+  baseCurrency         String               @default("MYR")
+  fiscalYearStartMonth Int                  @default(1)
+  tin                  String? // LHDNM Tax Identification Number
+  brn                  String? // Business Registration Number
+  industryCode         String? // MSIC code
+  active               Boolean              @default(true)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  users                User[]
+  accounts             Account[]
+  bankAccounts         BankAccount[]
+  creditNotes          CreditNote[]
+  debitNotes           DebitNote[]
+  recurringInvoices    RecurringInvoice[]
+  auditLogs            AuditLog[]
+  customers            Customer[]
+  suppliers            Supplier[]
+  items                Item[]
+  customerInvoices     CustomerInvoice[]
+  supplierInvoices     SupplierInvoice[]
+  salesOrders          SalesOrder[]
+  purchaseOrders       PurchaseOrder[]
+  journals             JournalEntry[]
+  fiscalYears          FiscalYear[]
+  taxCodes             TaxCode[]
+  einvoiceConfigs      EinvoiceConfig[]
+  einvoiceSubmissions  EinvoiceSubmission[]
+  customerPayments     CustomerPayment[]
+  supplierPayments     SupplierPayment[]
+  stockMovements       StockMovement[]
 }
 
 // --- Users / RBAC ---
@@ -50,16 +58,17 @@ enum Role {
 }
 
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
+  id            String       @id @default(uuid())
+  email         String       @unique
   passwordHash  String
   name          String
-  role          Role       @default(CLERK)
+  role          Role         @default(CLERK)
   accountBookId String?
   accountBook   AccountBook? @relation(fields: [accountBookId], references: [id])
-  active        Boolean    @default(true)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  auditLogs     AuditLog[]
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 }
 
 // --- Chart of accounts ---
@@ -72,21 +81,21 @@ enum AccountType {
 }
 
 model Account {
-  id            String     @id @default(uuid())
+  id            String        @id @default(uuid())
   accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  accountBook   AccountBook   @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
   code          String
   name          String
   type          AccountType
   parentId      String?
-  parent        Account?   @relation("AccountTree", fields: [parentId], references: [id])
-  children      Account[]  @relation("AccountTree")
-  currency      String     @default("MYR")
+  parent        Account?      @relation("AccountTree", fields: [parentId], references: [id])
+  children      Account[]     @relation("AccountTree")
+  currency      String        @default("MYR")
   taxCodeId     String?
-  taxCode       TaxCode?   @relation(fields: [taxCodeId], references: [id])
-  active        Boolean    @default(true)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  taxCode       TaxCode?      @relation(fields: [taxCodeId], references: [id])
+  active        Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   lines         JournalLine[]
 
   @@unique([accountBookId, code])
@@ -95,30 +104,33 @@ model Account {
 
 // --- Tax codes (SST/GST/None, etc.) ---
 model TaxCode {
-  customerInvoiceLines CustomerInvoiceLine[] @relation("TaxCodeOnCustomerLine")
-  supplierInvoiceLines SupplierInvoiceLine[] @relation("TaxCodeOnSupplierLine")
-  id            String   @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  code          String
-  name          String
-  rate          Decimal  @db.Decimal(7, 4)
-  description   String?
-  active        Boolean  @default(true)
-  accounts      Account[]
+  customerInvoiceLines CustomerInvoiceLine[]  @relation("TaxCodeOnCustomerLine")
+  creditNoteLines      CreditNoteLine[]       @relation("TaxCodeOnCreditNoteLine")
+  debitNoteLines       DebitNoteLine[]        @relation("TaxCodeOnDebitNoteLine")
+  recurringLines       RecurringInvoiceLine[] @relation("TaxCodeOnRecurringLine")
+  supplierInvoiceLines SupplierInvoiceLine[]  @relation("TaxCodeOnSupplierLine")
+  id                   String                 @id @default(uuid())
+  accountBookId        String
+  accountBook          AccountBook            @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  code                 String
+  name                 String
+  rate                 Decimal                @db.Decimal(7, 4)
+  description          String?
+  active               Boolean                @default(true)
+  accounts             Account[]
 
   @@unique([accountBookId, code])
 }
 
 // --- Fiscal years ---
 model FiscalYear {
-  id            String   @id @default(uuid())
+  id            String         @id @default(uuid())
   accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  accountBook   AccountBook    @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
   year          Int
   startDate     DateTime
   endDate       DateTime
-  closed        Boolean  @default(false)
+  closed        Boolean        @default(false)
   journals      JournalEntry[]
 
   @@unique([accountBookId, year])
@@ -132,64 +144,69 @@ enum JournalStatus {
 }
 
 model JournalEntry {
-  id            String     @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  number        String
-  fiscalYearId  String?
-  fiscalYear    FiscalYear? @relation(fields: [fiscalYearId], references: [id])
-  date          DateTime   @db.Date
-  description   String
-  reference     String?
-  status        JournalStatus @default(POSTED)
-  totalDebit    Decimal    @db.Decimal(18, 2)
-  totalCredit   Decimal    @db.Decimal(18, 2)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  lines         JournalLine[]
+  customerPayments CustomerPayment[]
+  supplierPayments SupplierPayment[]
+  id               String            @id @default(uuid())
+  accountBookId    String
+  accountBook      AccountBook       @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  number           String
+  fiscalYearId     String?
+  fiscalYear       FiscalYear?       @relation(fields: [fiscalYearId], references: [id])
+  date             DateTime          @db.Date
+  description      String
+  reference        String?
+  status           JournalStatus     @default(POSTED)
+  totalDebit       Decimal           @db.Decimal(18, 2)
+  totalCredit      Decimal           @db.Decimal(18, 2)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  lines            JournalLine[]
 
   @@unique([accountBookId, number])
   @@index([accountBookId, date])
 }
 
 model JournalLine {
-  id              String   @id @default(uuid())
-  journalId       String
-  journal         JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
-  accountId       String
-  account         Account  @relation(fields: [accountId], references: [id])
-  description     String?
-  debit           Decimal  @default(0) @db.Decimal(18, 2)
-  credit          Decimal  @default(0) @db.Decimal(18, 2)
+  id          String       @id @default(uuid())
+  journalId   String
+  journal     JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     Account      @relation(fields: [accountId], references: [id])
+  description String?
+  debit       Decimal      @default(0) @db.Decimal(18, 2)
+  credit      Decimal      @default(0) @db.Decimal(18, 2)
 
   @@index([accountId])
 }
 
 // --- Customers (AR) ---
 model Customer {
-  id            String   @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  code          String
-  name          String
-  email         String?
-  phone         String?
-  taxId         String?  // TIN of customer for MyInvois
-  brn           String?  // BRN of customer for MyInvois
-  addressLine1  String?
-  addressLine2  String?
-  city          String?
-  state         String?
-  postalCode    String?
-  country       String    @default("MY")
-  currency      String    @default("MYR")
-  creditLimit   Decimal   @default(0) @db.Decimal(18, 2)
-  outstanding   Decimal   @default(0) @db.Decimal(18, 2)
-  active        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  invoices      CustomerInvoice[]
-  salesOrders   SalesOrder[]
+  id                String             @id @default(uuid())
+  accountBookId     String
+  accountBook       AccountBook        @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  code              String
+  name              String
+  email             String?
+  phone             String?
+  taxId             String? // TIN of customer for MyInvois
+  brn               String? // BRN of customer for MyInvois
+  addressLine1      String?
+  addressLine2      String?
+  city              String?
+  state             String?
+  postalCode        String?
+  country           String             @default("MY")
+  currency          String             @default("MYR")
+  creditLimit       Decimal            @default(0) @db.Decimal(18, 2)
+  outstanding       Decimal            @default(0) @db.Decimal(18, 2)
+  active            Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  creditNotes       CreditNote[]
+  recurringInvoices RecurringInvoice[]
+  invoices          CustomerInvoice[]
+  salesOrders       SalesOrder[]
+  customerPayments  CustomerPayment[]
 
   @@unique([accountBookId, code])
   @@index([accountBookId, name])
@@ -197,28 +214,30 @@ model Customer {
 
 // --- Suppliers (AP) ---
 model Supplier {
-  id            String   @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  code          String
-  name          String
-  email         String?
-  phone         String?
-  taxId         String?
-  brn           String?
-  addressLine1  String?
-  addressLine2  String?
-  city          String?
-  state         String?
-  postalCode    String?
-  country       String    @default("MY")
-  currency      String    @default("MYR")
-  outstanding   Decimal   @default(0) @db.Decimal(18, 2)
-  active        Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  invoices      SupplierInvoice[]
-  purchaseOrders PurchaseOrder[]
+  id               String            @id @default(uuid())
+  accountBookId    String
+  accountBook      AccountBook       @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  code             String
+  name             String
+  email            String?
+  phone            String?
+  taxId            String?
+  brn              String?
+  addressLine1     String?
+  addressLine2     String?
+  city             String?
+  state            String?
+  postalCode       String?
+  country          String            @default("MY")
+  currency         String            @default("MYR")
+  outstanding      Decimal           @default(0) @db.Decimal(18, 2)
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  debitNotes       DebitNote[]
+  invoices         SupplierInvoice[]
+  purchaseOrders   PurchaseOrder[]
+  supplierPayments SupplierPayment[]
 
   @@unique([accountBookId, code])
   @@index([accountBookId, name])
@@ -243,32 +262,34 @@ enum EinvoiceStatus {
 }
 
 model CustomerInvoice {
-  id            String     @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  customerId    String
-  customer      Customer   @relation(fields: [customerId], references: [id])
-  number        String
-  date          DateTime   @db.Date
-  dueDate       DateTime   @db.Date
-  currency      String     @default("MYR")
-  exchangeRate  Decimal    @default(1) @db.Decimal(18, 8)
-  subtotal      Decimal    @default(0) @db.Decimal(18, 2)
-  taxTotal      Decimal    @default(0) @db.Decimal(18, 2)
-  total         Decimal    @default(0) @db.Decimal(18, 2)
-  paid          Decimal    @default(0) @db.Decimal(18, 2)
-  balance       Decimal    @default(0) @db.Decimal(18, 2)
-  status        InvoiceStatus @default(ISSUED)
-  notes         String?
-  einvoiceStatus EinvoiceStatus @default(NOT_SUBMITTED)
-  einvoiceUuid  String?
-  einvoiceLongId String?
-  einvoiceQR    String?    @db.Text
-  einvoiceValidatedAt DateTime?
-  einvoiceSubmissions EinvoiceSubmission[]
-  lines         CustomerInvoiceLine[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                          String                       @id @default(uuid())
+  accountBookId               String
+  accountBook                 AccountBook                  @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  customerId                  String
+  customer                    Customer                     @relation(fields: [customerId], references: [id])
+  number                      String
+  date                        DateTime                     @db.Date
+  dueDate                     DateTime                     @db.Date
+  currency                    String                       @default("MYR")
+  exchangeRate                Decimal                      @default(1) @db.Decimal(18, 8)
+  subtotal                    Decimal                      @default(0) @db.Decimal(18, 2)
+  taxTotal                    Decimal                      @default(0) @db.Decimal(18, 2)
+  total                       Decimal                      @default(0) @db.Decimal(18, 2)
+  paid                        Decimal                      @default(0) @db.Decimal(18, 2)
+  balance                     Decimal                      @default(0) @db.Decimal(18, 2)
+  status                      InvoiceStatus                @default(ISSUED)
+  notes                       String?
+  einvoiceStatus              EinvoiceStatus               @default(NOT_SUBMITTED)
+  einvoiceUuid                String?
+  einvoiceLongId              String?
+  einvoiceQR                  String?                      @db.Text
+  einvoiceValidatedAt         DateTime?
+  einvoiceSubmissions         EinvoiceSubmission[]
+  customerPaymentApplications CustomerPaymentApplication[]
+  creditNotes                 CreditNote[]                 @relation("InvoiceCreditNotes")
+  lines                       CustomerInvoiceLine[]
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
 
   @@unique([accountBookId, number])
   @@index([accountBookId, customerId])
@@ -277,87 +298,93 @@ model CustomerInvoice {
 }
 
 model CustomerInvoiceLine {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   invoiceId   String
   invoice     CustomerInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   itemId      String?
-  item        Item?    @relation(fields: [itemId], references: [id])
+  item        Item?           @relation(fields: [itemId], references: [id])
   description String
-  quantity    Decimal  @db.Decimal(18, 4)
-  unitPrice   Decimal  @db.Decimal(18, 4)
-  discount    Decimal  @default(0) @db.Decimal(18, 2)
+  quantity    Decimal         @db.Decimal(18, 4)
+  unitPrice   Decimal         @db.Decimal(18, 4)
+  discount    Decimal         @default(0) @db.Decimal(18, 2)
   taxCodeId   String?
-  taxCode     TaxCode? @relation("TaxCodeOnCustomerLine", fields: [taxCodeId], references: [id])
-  taxAmount   Decimal  @default(0) @db.Decimal(18, 2)
-  subtotal    Decimal  @db.Decimal(18, 2)
-  total       Decimal  @db.Decimal(18, 2)
+  taxCode     TaxCode?        @relation("TaxCodeOnCustomerLine", fields: [taxCodeId], references: [id])
+  taxAmount   Decimal         @default(0) @db.Decimal(18, 2)
+  subtotal    Decimal         @db.Decimal(18, 2)
+  total       Decimal         @db.Decimal(18, 2)
   lineNo      Int
 }
 
 // --- Supplier invoices (AP) ---
 model SupplierInvoice {
-  id            String     @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  supplierId    String
-  supplier      Supplier   @relation(fields: [supplierId], references: [id])
-  number        String
-  date          DateTime   @db.Date
-  dueDate       DateTime   @db.Date
-  currency      String     @default("MYR")
-  subtotal      Decimal    @default(0) @db.Decimal(18, 2)
-  taxTotal      Decimal    @default(0) @db.Decimal(18, 2)
-  total         Decimal    @default(0) @db.Decimal(18, 2)
-  paid          Decimal    @default(0) @db.Decimal(18, 2)
-  balance       Decimal    @default(0) @db.Decimal(18, 2)
-  status        InvoiceStatus @default(ISSUED)
-  notes         String?
-  lines         SupplierInvoiceLine[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                  String                       @id @default(uuid())
+  accountBookId       String
+  accountBook         AccountBook                  @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  supplierId          String
+  supplier            Supplier                     @relation(fields: [supplierId], references: [id])
+  number              String
+  date                DateTime                     @db.Date
+  dueDate             DateTime                     @db.Date
+  currency            String                       @default("MYR")
+  subtotal            Decimal                      @default(0) @db.Decimal(18, 2)
+  taxTotal            Decimal                      @default(0) @db.Decimal(18, 2)
+  total               Decimal                      @default(0) @db.Decimal(18, 2)
+  paid                Decimal                      @default(0) @db.Decimal(18, 2)
+  balance             Decimal                      @default(0) @db.Decimal(18, 2)
+  status              InvoiceStatus                @default(ISSUED)
+  notes               String?
+  paymentApplications SupplierPaymentApplication[]
+  debitNotes          DebitNote[]                  @relation("SupplierDebitNotes")
+  lines               SupplierInvoiceLine[]
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
 
   @@unique([accountBookId, number])
   @@index([accountBookId, supplierId])
 }
 
 model SupplierInvoiceLine {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   invoiceId   String
   invoice     SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   itemId      String?
-  item        Item?    @relation(fields: [itemId], references: [id])
+  item        Item?           @relation(fields: [itemId], references: [id])
   description String
-  quantity    Decimal  @db.Decimal(18, 4)
-  unitPrice   Decimal  @db.Decimal(18, 4)
-  discount    Decimal  @default(0) @db.Decimal(18, 2)
+  quantity    Decimal         @db.Decimal(18, 4)
+  unitPrice   Decimal         @db.Decimal(18, 4)
+  discount    Decimal         @default(0) @db.Decimal(18, 2)
   taxCodeId   String?
-  taxCode     TaxCode? @relation("TaxCodeOnSupplierLine", fields: [taxCodeId], references: [id])
-  taxAmount   Decimal  @default(0) @db.Decimal(18, 2)
-  subtotal    Decimal  @db.Decimal(18, 2)
-  total       Decimal  @db.Decimal(18, 2)
+  taxCode     TaxCode?        @relation("TaxCodeOnSupplierLine", fields: [taxCodeId], references: [id])
+  taxAmount   Decimal         @default(0) @db.Decimal(18, 2)
+  subtotal    Decimal         @db.Decimal(18, 2)
+  total       Decimal         @db.Decimal(18, 2)
   lineNo      Int
 }
 
 // --- Items / stock ---
 model Item {
-  id            String   @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  code          String
-  barcode       String?
-  name          String
-  description   String?
-  uom           String   @default("PCS")
-  cost          Decimal  @default(0) @db.Decimal(18, 4)
-  price         Decimal  @default(0) @db.Decimal(18, 4)
-  onHand        Decimal  @default(0) @db.Decimal(18, 4)
-  reorderLevel  Decimal  @default(0) @db.Decimal(18, 4)
-  classification String? // MyInvois classification code
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                   String                 @id @default(uuid())
+  accountBookId        String
+  accountBook          AccountBook            @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  code                 String
+  barcode              String?
+  name                 String
+  description          String?
+  uom                  String                 @default("PCS")
+  cost                 Decimal                @default(0) @db.Decimal(18, 4)
+  price                Decimal                @default(0) @db.Decimal(18, 4)
+  onHand               Decimal                @default(0) @db.Decimal(18, 4)
+  reorderLevel         Decimal                @default(0) @db.Decimal(18, 4)
+  classification       String? // MyInvois classification code
+  active               Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   customerInvoiceLines CustomerInvoiceLine[]
   supplierInvoiceLines SupplierInvoiceLine[]
+  creditNoteLines      CreditNoteLine[]       @relation("CreditNoteLineItem")
+  debitNoteLines       DebitNoteLine[]        @relation("DebitNoteLineItem")
+  recurringLines       RecurringInvoiceLine[] @relation("RecurringLineItem")
+  stockMovements       StockMovement[]
 
   @@unique([accountBookId, code])
   @@index([accountBookId, name])
@@ -371,18 +398,18 @@ enum SalesOrderStatus {
 }
 
 model SalesOrder {
-  id            String   @id @default(uuid())
+  id            String           @id @default(uuid())
   accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  accountBook   AccountBook      @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
   customerId    String
-  customer      Customer @relation(fields: [customerId], references: [id])
+  customer      Customer         @relation(fields: [customerId], references: [id])
   number        String
-  date          DateTime @db.Date
-  total         Decimal  @default(0) @db.Decimal(18, 2)
+  date          DateTime         @db.Date
+  total         Decimal          @default(0) @db.Decimal(18, 2)
   status        SalesOrderStatus @default(OPEN)
   notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@unique([accountBookId, number])
   @@index([accountBookId, customerId])
@@ -396,21 +423,135 @@ enum PurchaseOrderStatus {
 }
 
 model PurchaseOrder {
-  id            String   @id @default(uuid())
+  id            String              @id @default(uuid())
   accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  accountBook   AccountBook         @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
   supplierId    String
-  supplier      Supplier @relation(fields: [supplierId], references: [id])
+  supplier      Supplier            @relation(fields: [supplierId], references: [id])
   number        String
-  date          DateTime @db.Date
-  total         Decimal  @default(0) @db.Decimal(18, 2)
+  date          DateTime            @db.Date
+  total         Decimal             @default(0) @db.Decimal(18, 2)
   status        PurchaseOrderStatus @default(OPEN)
   notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
   @@unique([accountBookId, number])
   @@index([accountBookId, supplierId])
+}
+
+// --- Customer payments (receipts) ---
+enum PaymentMethod {
+  CASH
+  BANK
+  CHEQUE
+  CARD
+  EFT
+  OTHER
+}
+
+enum PaymentStatus {
+  DRAFT
+  POSTED
+  VOID
+}
+
+model CustomerPayment {
+  id            String                       @id @default(uuid())
+  accountBookId String
+  accountBook   AccountBook                  @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  number        String
+  customerId    String
+  customer      Customer                     @relation(fields: [customerId], references: [id])
+  date          DateTime                     @db.Date
+  amount        Decimal                      @db.Decimal(18, 2)
+  method        PaymentMethod                @default(BANK)
+  reference     String?
+  notes         String?
+  status        PaymentStatus                @default(POSTED)
+  journalId     String?
+  journal       JournalEntry?                @relation(fields: [journalId], references: [id])
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+  applications  CustomerPaymentApplication[]
+
+  @@unique([accountBookId, number])
+  @@index([accountBookId, customerId])
+}
+
+model CustomerPaymentApplication {
+  id        String           @id @default(uuid())
+  paymentId String
+  payment   CustomerPayment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId String?
+  invoice   CustomerInvoice? @relation(fields: [invoiceId], references: [id])
+  amount    Decimal          @db.Decimal(18, 2)
+  createdAt DateTime         @default(now())
+
+  @@index([paymentId])
+  @@index([invoiceId])
+}
+
+// --- Supplier payments (disbursements) ---
+model SupplierPayment {
+  id            String                       @id @default(uuid())
+  accountBookId String
+  accountBook   AccountBook                  @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  number        String
+  supplierId    String
+  supplier      Supplier                     @relation(fields: [supplierId], references: [id])
+  date          DateTime                     @db.Date
+  amount        Decimal                      @db.Decimal(18, 2)
+  method        PaymentMethod                @default(BANK)
+  reference     String?
+  notes         String?
+  status        PaymentStatus                @default(POSTED)
+  journalId     String?
+  journal       JournalEntry?                @relation(fields: [journalId], references: [id])
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+  applications  SupplierPaymentApplication[]
+
+  @@unique([accountBookId, number])
+  @@index([accountBookId, supplierId])
+}
+
+model SupplierPaymentApplication {
+  id        String          @id @default(uuid())
+  paymentId String
+  payment   SupplierPayment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Decimal         @db.Decimal(18, 2)
+  createdAt DateTime        @default(now())
+
+  @@index([paymentId])
+  @@index([invoiceId])
+}
+
+// --- Stock movements ---
+enum StockMovementType {
+  RECEIVE
+  ISSUE
+  ADJUST
+  TRANSFER
+}
+
+model StockMovement {
+  id            String            @id @default(uuid())
+  accountBookId String
+  accountBook   AccountBook       @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  itemId        String
+  item          Item              @relation(fields: [itemId], references: [id])
+  type          StockMovementType
+  quantity      Decimal           @db.Decimal(18, 4) // positive for RECEIVE, negative for ISSUE; ADJUST can be +/- 
+  unitCost      Decimal           @default(0) @db.Decimal(18, 4)
+  reference     String? // PO/SO number, manual ref
+  notes         String?
+  createdAt     DateTime          @default(now())
+
+  @@index([accountBookId, itemId])
+  @@index([accountBookId, createdAt])
 }
 
 // --- MyInvois / LHDNM e-invoice configuration & submissions ---
@@ -420,49 +561,238 @@ enum EinvoiceEnvironment {
 }
 
 model EinvoiceConfig {
-  id            String   @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  environment   EinvoiceEnvironment @default(SANDBOX)
-  clientId      String
-  clientSecret  String
-  taxpayerTin   String
-  taxpayerBrn   String?
-  taxpayerName  String?
-  certPath      String?  // path inside the container (e.g. /var/lib/vibe/certs/client.p12)
+  id             String              @id @default(uuid())
+  accountBookId  String
+  accountBook    AccountBook         @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  environment    EinvoiceEnvironment @default(SANDBOX)
+  clientId       String
+  clientSecret   String
+  taxpayerTin    String
+  taxpayerBrn    String?
+  taxpayerName   String?
+  certPath       String? // path inside the container (e.g. /var/lib/vibe/certs/client.p12)
   certPassphrase String?
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@unique([accountBookId, environment])
 }
 
 model EinvoiceSubmission {
-  id            String   @id @default(uuid())
-  accountBookId String
-  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
-  invoiceId     String
-  invoice       CustomerInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  documentType  String   // invoice, credit-note, debit-note, refund-note, self-billed-*
-  documentVersion String @default("1.1")
-  format        String   @default("JSON") // JSON | XML
-  environment   EinvoiceEnvironment
-  payloadHash   String?  // SHA-256 of signed payload
-  payload       String   @db.Text  // raw signed payload
-  submissionUid String?  // MyInvois submission UID
+  id                String              @id @default(uuid())
+  accountBookId     String
+  accountBook       AccountBook         @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  invoiceId         String?
+  invoice           CustomerInvoice?    @relation(fields: [invoiceId], references: [id])
+  creditNoteId      String?
+  creditNote        CreditNote?         @relation("CreditNoteSubmissions", fields: [creditNoteId], references: [id])
+  documentType      String // invoice, credit-note, debit-note, refund-note, self-billed-*
+  documentVersion   String              @default("1.1")
+  format            String              @default("JSON") // JSON | XML
+  environment       EinvoiceEnvironment
+  payloadHash       String? // SHA-256 of signed payload
+  payload           String              @db.Text // raw signed payload
+  submissionUid     String? // MyInvois submission UID
   acceptedDocuments Json? // MyInvois acceptedDocs response
   rejectedDocuments Json?
-  documentStatus Int?     // MyInvois status code: 1=submitted 2=valid 3=invalid 4=cancelled
-  errorMessage  String?  @db.Text
-  attempts      Int      @default(0)
-  submittedAt   DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  documentStatus    Int? // MyInvois status code: 1=submitted 2=valid 3=invalid 4=cancelled
+  errorMessage      String?             @db.Text
+  attempts          Int                 @default(0)
+  submittedAt       DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
   @@index([accountBookId, invoiceId])
   @@index([documentStatus])
 }
 
+// --- Bank accounts (cash + bank) ---
+model BankAccount {
+  id             String      @id @default(uuid())
+  accountBookId  String
+  accountBook    AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  name           String
+  bankName       String?
+  accountNumber  String?
+  glAccountCode  String      @default("1100") // chart-of-accounts code (e.g. 1100 Bank, 1000 Cash)
+  currency       String      @default("MYR")
+  openingBalance Decimal     @default(0) @db.Decimal(18, 2)
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
+  @@unique([accountBookId, name])
+  @@index([accountBookId])
+}
+
+// --- Credit notes (refund / adjustment to AR) ---
+model CreditNote {
+  id                  String               @id @default(uuid())
+  accountBookId       String
+  accountBook         AccountBook          @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  customerId          String
+  customer            Customer             @relation(fields: [customerId], references: [id])
+  invoiceId           String? // invoice this credit note adjusts
+  invoice             CustomerInvoice?     @relation("InvoiceCreditNotes", fields: [invoiceId], references: [id])
+  number              String
+  date                DateTime             @db.Date
+  reason              String?
+  currency            String               @default("MYR")
+  subtotal            Decimal              @default(0) @db.Decimal(18, 2)
+  taxTotal            Decimal              @default(0) @db.Decimal(18, 2)
+  total               Decimal              @default(0) @db.Decimal(18, 2)
+  status              CreditNoteStatus     @default(ISSUED)
+  notes               String?
+  einvoiceStatus      EinvoiceStatus       @default(NOT_SUBMITTED)
+  einvoiceUuid        String?
+  einvoiceLongId      String?
+  einvoiceSubmissions EinvoiceSubmission[] @relation("CreditNoteSubmissions")
+  lines               CreditNoteLine[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@unique([accountBookId, number])
+  @@index([accountBookId, customerId])
+  @@index([accountBookId, date])
+}
+
+model CreditNoteLine {
+  id           String     @id @default(uuid())
+  creditNoteId String
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  itemId       String?
+  item         Item?      @relation("CreditNoteLineItem", fields: [itemId], references: [id])
+  description  String
+  quantity     Decimal    @db.Decimal(18, 4)
+  unitPrice    Decimal    @db.Decimal(18, 4)
+  discount     Decimal    @default(0) @db.Decimal(18, 2)
+  taxCodeId    String?
+  taxCode      TaxCode?   @relation("TaxCodeOnCreditNoteLine", fields: [taxCodeId], references: [id])
+  taxAmount    Decimal    @default(0) @db.Decimal(18, 2)
+  subtotal     Decimal    @db.Decimal(18, 2)
+  total        Decimal    @db.Decimal(18, 2)
+  lineNo       Int
+}
+
+enum CreditNoteStatus {
+  DRAFT
+  ISSUED
+  APPLIED
+  VOID
+}
+
+// --- Debit notes (additional charge / adjustment to AP) ---
+model DebitNote {
+  id            String           @id @default(uuid())
+  accountBookId String
+  accountBook   AccountBook      @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  supplierId    String
+  supplier      Supplier         @relation(fields: [supplierId], references: [id])
+  invoiceId     String? // supplier bill this debit note adjusts
+  invoice       SupplierInvoice? @relation("SupplierDebitNotes", fields: [invoiceId], references: [id])
+  number        String
+  date          DateTime         @db.Date
+  reason        String?
+  currency      String           @default("MYR")
+  subtotal      Decimal          @default(0) @db.Decimal(18, 2)
+  taxTotal      Decimal          @default(0) @db.Decimal(18, 2)
+  total         Decimal          @default(0) @db.Decimal(18, 2)
+  status        DebitNoteStatus  @default(ISSUED)
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  lines         DebitNoteLine[]
+
+  @@unique([accountBookId, number])
+  @@index([accountBookId, supplierId])
+}
+
+model DebitNoteLine {
+  id          String    @id @default(uuid())
+  debitNoteId String
+  debitNote   DebitNote @relation(fields: [debitNoteId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?     @relation("DebitNoteLineItem", fields: [itemId], references: [id])
+  description String
+  quantity    Decimal   @db.Decimal(18, 4)
+  unitPrice   Decimal   @db.Decimal(18, 4)
+  discount    Decimal   @default(0) @db.Decimal(18, 2)
+  taxCodeId   String?
+  taxCode     TaxCode?  @relation("TaxCodeOnDebitNoteLine", fields: [taxCodeId], references: [id])
+  taxAmount   Decimal   @default(0) @db.Decimal(18, 2)
+  subtotal    Decimal   @db.Decimal(18, 2)
+  total       Decimal   @db.Decimal(18, 2)
+  lineNo      Int
+}
+
+enum DebitNoteStatus {
+  DRAFT
+  ISSUED
+  APPLIED
+  VOID
+}
+
+// --- Recurring invoice templates ---
+model RecurringInvoice {
+  id            String                 @id @default(uuid())
+  accountBookId String
+  accountBook   AccountBook            @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  customerId    String
+  customer      Customer               @relation(fields: [customerId], references: [id])
+  name          String
+  frequency     RecurringFrequency
+  startDate     DateTime               @db.Date
+  endDate       DateTime?              @db.Date
+  nextRunDate   DateTime               @db.Date
+  lastRunDate   DateTime?              @db.Date
+  currency      String                 @default("MYR")
+  notes         String?
+  active        Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  lines         RecurringInvoiceLine[]
+
+  @@index([accountBookId, customerId])
+  @@index([accountBookId, nextRunDate])
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model RecurringInvoiceLine {
+  id          String           @id @default(uuid())
+  recurringId String
+  recurring   RecurringInvoice @relation(fields: [recurringId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?            @relation("RecurringLineItem", fields: [itemId], references: [id])
+  description String
+  quantity    Decimal          @db.Decimal(18, 4)
+  unitPrice   Decimal          @db.Decimal(18, 4)
+  taxCodeId   String?
+  taxCode     TaxCode?         @relation("TaxCodeOnRecurringLine", fields: [taxCodeId], references: [id])
+  lineNo      Int
+}
+
+// --- Audit log (entity-level history) ---
+model AuditLog {
+  id            String      @id @default(uuid())
+  accountBookId String
+  accountBook   AccountBook @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id])
+  entity        String // e.g. "CustomerInvoice", "JournalEntry"
+  entityId      String
+  action        String // CREATE, UPDATE, DELETE, SUBMIT, CANCEL, POST
+  payload       Json?
+  message       String?
+  createdAt     DateTime    @default(now())
+
+  @@index([accountBookId, entity, entityId])
+  @@index([accountBookId, createdAt])
+}

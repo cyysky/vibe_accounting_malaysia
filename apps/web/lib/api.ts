@@ -214,6 +214,68 @@ export interface EinvoiceSubmission {
   invoice?: { id: string; number: string };
 }
 
+
+export interface Payment {
+  id: string;
+  number: string;
+  customerId?: string;
+  supplierId?: string;
+  customer?: { id: string; name: string };
+  supplier?: { id: string; name: string };
+  date: string;
+  amount: number;
+  method: string;
+  reference?: string;
+  notes?: string;
+  status: string;
+  journalId?: string;
+  applications: Array<{ id: string; invoiceId: string; amount: number; invoice?: { id: string; number: string; total: number; paid: number; balance: number } }>;
+}
+
+export interface StockMovement {
+  id: string;
+  itemId: string;
+  item?: { id: string; code: string; name: string; uom: string };
+  type: string;
+  quantity: number;
+  unitCost: number;
+  reference?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface AgingRow {
+  customerId?: string;
+  supplierId?: string;
+  customerName?: string;
+  supplierName?: string;
+  buckets: { current: number; d1_30: number; d31_60: number; d61_90: number; d90_plus: number; total: number };
+  invoices: Array<{ id: string; number: string; date: string; dueDate: string; balance: number; daysOverdue: number }>;
+}
+
+export interface GLLine {
+  journalId: string;
+  journalNumber: string;
+  date: string;
+  description: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  runningBalance: number;
+}
+
+export interface GLSummary {
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  opening: number;
+  debit: number;
+  credit: number;
+  closing: number;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -552,8 +614,203 @@ class ApiClient {
   validateEinvoiceTin(input: { env?: 'SANDBOX' | 'PRODUCTION'; tin: string; idType: string; idValue: string }): Promise<unknown> {
     return this.request('POST', '/einvoice/validate-tin', input);
   }
-}
+// --- Payments ---
+  customerPayments(): Promise<Payment[]> {
+    return this.request<Payment[]>('GET', '/ar/payments');
+  }
+  customerPayment(id: string): Promise<Payment> {
+    return this.request<Payment>('GET', `/ar/payments/${id}`);
+  }
+  createCustomerPayment(input: { customerId: string; date: string; amount: number; method: string; reference?: string; notes?: string; applications: Array<{ invoiceId: string; amount: number }> }): Promise<Payment> {
+    return this.request<Payment>('POST', '/ar/payments', input);
+  }
+  supplierPayments(): Promise<Payment[]> {
+    return this.request<Payment[]>('GET', '/ap/payments');
+  }
+  supplierPayment(id: string): Promise<Payment> {
+    return this.request<Payment>('GET', `/ap/payments/${id}`);
+  }
+  createSupplierPayment(input: { supplierId: string; date: string; amount: number; method: string; reference?: string; notes?: string; applications: Array<{ invoiceId: string; amount: number }> }): Promise<Payment> {
+    return this.request<Payment>('POST', '/ap/payments', input);
+  }
 
+  // --- Stock Movements ---
+  stockMovements(): Promise<StockMovement[]> {
+    return this.request<StockMovement[]>('GET', '/stock/movements');
+  }
+  createStockMovement(input: { itemId: string; type: string; quantity: number; date: string; unitCost?: number; reference?: string; notes?: string }): Promise<StockMovement> {
+    return this.request<StockMovement>('POST', '/stock/movements', input);
+  }
+
+  // --- Reports ---
+  arAging(asOf?: string): Promise<{ asOf: string; rows: AgingRow[]; totals: AgingRow["buckets"] }> {
+    return this.request('GET', '/reports/ar-aging', undefined, { asOf });
+  }
+  apAging(asOf?: string): Promise<{ asOf: string; rows: AgingRow[]; totals: AgingRow["buckets"] }> {
+    return this.request('GET', '/reports/ap-aging', undefined, { asOf });
+  }
+  generalLedger(from?: string, to?: string): Promise<{ from: string | null; to: string | null; lines: GLLine[]; accounts: GLSummary[] }> {
+    return this.request('GET', '/reports/general-ledger', undefined, { from, to });
+  }
+
+  // --- Credit notes ---
+  creditNotes(customerId?: string): Promise<CreditNote[]> {
+    return this.request<CreditNote[]>('GET', '/ar/credit-notes', undefined, { customerId });
+  }
+  getCreditNote(id: string): Promise<CreditNote> {
+    return this.request<CreditNote>('GET', `/ar/credit-notes/${id}`);
+  }
+  createCreditNote(input: Partial<CreditNote> & { lines: CreditNote['lines'] }): Promise<CreditNote> {
+    return this.request<CreditNote>('POST', '/ar/credit-notes', input);
+  }
+  updateCreditNote(id: string, input: Partial<CreditNote>): Promise<CreditNote> {
+    return this.request<CreditNote>('PUT', `/ar/credit-notes/${id}`, input);
+  }
+  deleteCreditNote(id: string): Promise<void> {
+    return this.request<void>('DELETE', `/ar/credit-notes/${id}`);
+  }
+
+  // --- Debit notes ---
+  debitNotes(supplierId?: string): Promise<DebitNote[]> {
+    return this.request<DebitNote[]>('GET', '/ap/debit-notes', undefined, { supplierId });
+  }
+  getDebitNote(id: string): Promise<DebitNote> {
+    return this.request<DebitNote>('GET', `/ap/debit-notes/${id}`);
+  }
+  createDebitNote(input: Partial<DebitNote> & { lines: DebitNote['lines'] }): Promise<DebitNote> {
+    return this.request<DebitNote>('POST', '/ap/debit-notes', input);
+  }
+  updateDebitNote(id: string, input: Partial<DebitNote>): Promise<DebitNote> {
+    return this.request<DebitNote>('PUT', `/ap/debit-notes/${id}`, input);
+  }
+  deleteDebitNote(id: string): Promise<void> {
+    return this.request<void>('DELETE', `/ap/debit-notes/${id}`);
+  }
+
+  // --- Bank accounts ---
+  bankAccounts(): Promise<BankAccount[]> {
+    return this.request<BankAccount[]>('GET', '/bank-accounts');
+  }
+  createBankAccount(input: Partial<BankAccount>): Promise<BankAccount> {
+    return this.request<BankAccount>('POST', '/bank-accounts', input);
+  }
+  updateBankAccount(id: string, input: Partial<BankAccount>): Promise<BankAccount> {
+    return this.request<BankAccount>('PUT', `/bank-accounts/${id}`, input);
+  }
+  deleteBankAccount(id: string): Promise<void> {
+    return this.request<void>('DELETE', `/bank-accounts/${id}`);
+  }
+
+  // --- Recurring invoices ---
+  recurringInvoices(): Promise<RecurringInvoice[]> {
+    return this.request<RecurringInvoice[]>('GET', '/recurring');
+  }
+  createRecurring(input: Partial<RecurringInvoice> & { lines: RecurringInvoice['lines'] }): Promise<RecurringInvoice> {
+    return this.request<RecurringInvoice>('POST', '/recurring', input);
+  }
+  updateRecurring(id: string, input: Partial<RecurringInvoice>): Promise<RecurringInvoice> {
+    return this.request<RecurringInvoice>('PUT', `/recurring/${id}`, input);
+  }
+  deleteRecurring(id: string): Promise<void> {
+    return this.request<void>('DELETE', `/recurring/${id}`);
+  }
+  runRecurring(id: string): Promise<unknown> {
+    return this.request('POST', `/recurring/${id}/run`);
+  }
+  runDueRecurring(): Promise<unknown> {
+    return this.request('POST', '/recurring/run-due');
+  }
+
+  // --- Audit log ---
+  auditLog(limit = 100, entity?: string): Promise<AuditLogEntry[]> {
+    return this.request<AuditLogEntry[]>('GET', '/audit-log', undefined, { limit, entity });
+  }
+  auditLogFor(entity: string, entityId: string): Promise<AuditLogEntry[]> {
+    return this.request<AuditLogEntry[]>('GET', `/audit-log/${entity}/${entityId}`);
+  }
+
+  // --- Stock movements (alias used by some pages) ---
+  createStockReceive(itemId: string, quantity: number, unitCost: number, reference?: string, notes?: string): Promise<StockMovement> {
+    return this.createStockMovement({ itemId, type: 'RECEIVE', quantity, unitCost, date: new Date().toISOString(), reference, notes });
+  }
+}
 export const api = new ApiClient();
 
 
+
+export interface CreditNote {
+  id: string;
+  number: string;
+  customerId: string;
+  customer?: { id: string; name: string };
+  invoiceId?: string;
+  invoice?: { id: string; number: string };
+  date: string;
+  reason: string;
+  notes?: string;
+  currency: string;
+  subtotal: number;
+  taxTotal: number;
+  total: number;
+  status: 'DRAFT' | 'ISSUED' | 'APPLIED' | 'VOID';
+  einvoiceStatus?: 'NOT_SUBMITTED' | 'PENDING' | 'SUBMITTED' | 'VALID' | 'INVALID' | 'CANCELLED';
+  einvoiceUuid?: string;
+  einvoiceLongId?: string;
+  lines: Array<{ id?: string; description: string; quantity: number; unitPrice: number; discount?: number; taxCodeId?: string; taxAmount?: number; subtotal?: number; total?: number; lineNo?: number }>;
+}
+
+export interface DebitNote {
+  id: string;
+  number: string;
+  supplierId: string;
+  supplier?: { id: string; name: string };
+  invoiceId?: string;
+  invoice?: { id: string; number: string };
+  date: string;
+  reason: string;
+  notes?: string;
+  currency: string;
+  subtotal: number;
+  taxTotal: number;
+  total: number;
+  status: 'DRAFT' | 'ISSUED' | 'APPLIED' | 'VOID';
+  lines: Array<{ id?: string; description: string; quantity: number; unitPrice: number; discount?: number; taxCodeId?: string; taxAmount?: number; subtotal?: number; total?: number; lineNo?: number }>;
+}
+
+export interface BankAccount {
+  id: string;
+  name: string;
+  bankName?: string;
+  accountNumber?: string;
+  glAccountCode: string;
+  currency: string;
+  openingBalance: number;
+  active: boolean;
+}
+
+export interface RecurringInvoice {
+  id: string;
+  customerId: string;
+  customer?: { id: string; name: string };
+  name: string;
+  frequency: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  startDate: string;
+  endDate?: string;
+  nextRunDate: string;
+  lastRunDate?: string;
+  currency: string;
+  notes?: string;
+  active: boolean;
+  lines: Array<{ id?: string; description: string; quantity: number; unitPrice: number; taxCodeId?: string; lineNo?: number }>;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  entity: string;
+  entityId: string;
+  action: string;
+  message?: string;
+  userId?: string;
+  user?: { id: string; email: string; name: string };
+  createdAt: string;
+}

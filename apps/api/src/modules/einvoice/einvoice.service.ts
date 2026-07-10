@@ -89,10 +89,12 @@ export class EinvoiceService {
     const taxCodes = new Map(
       (await this.prisma.taxCode.findMany({ where: { accountBookId: bookId } })).map((t) => [t.id, t]),
     );
+    const book = await this.prisma.accountBook.findUnique({ where: { id: bookId } });
     const supplier = {
       tin: cfg.taxpayerTin,
       brn: cfg.taxpayerBrn ?? null,
-      name: cfg.taxpayerName ?? 'Demo Company Sdn Bhd',
+      name: cfg.taxpayerName ?? book?.name ?? 'Demo Company Sdn Bhd',
+      msic: book?.industryCode ?? undefined,
     };
     const v = (opts.version ?? '1.1') as '1.1' | '1.0';
     const ubl = buildUblInvoice({

@@ -78,6 +78,29 @@ exercised.
 Supported versions: `1.0` and `1.1`.  Vibe Accounting Malaysia defaults
 to `1.1` and emits JSON (XML is also supported by the MyInvois API).
 
+### MyInvois UBL 2.1 v1.1 document type codes
+
+| Code | Document type             | Mapper `documentType` value     |
+| ---- | ------------------------- | ------------------------------- |
+| 01   | Invoice                   | `invoice`                       |
+| 02   | Credit note               | `credit-note`                   |
+| 03   | Debit note                | `debit-note`                    |
+| 04   | Refund note               | `refund-note`                   |
+| 11   | Self-billed invoice        | `self-billed-invoice`           |
+| 12   | Self-billed credit note    | `self-billed-credit-note`       |
+| 13   | Self-billed debit note     | `self-billed-debit-note`        |
+
+The mapper (`buildUblInvoice` in `apps/api/src/modules/einvoice/mappers/invoice-v1.1.mapper.ts`)
+emits the canonical UBL 2.1 JSON v1.1 shape with:
+
+- **Allowance / charge** on each line when a discount is present
+- Multi-line supplier and customer addresses (Street + Line)
+- Supplier and customer contact (ElectronicMail + Telephone)
+- MSIC industry code from the `AccountBook.industryCode`
+- Per-currency precision (the invoice currency is propagated to all monetary fields)
+- TIN validation: the mapper throws if the supplier TIN is empty
+- Optional `BillingReference` to link credit/debit notes to their source invoice
+
 ## UBL 2.1 JSON structure
 
 The mapper (`apps/api/src/modules/einvoice/mappers/invoice-v1.1.mapper.ts`)

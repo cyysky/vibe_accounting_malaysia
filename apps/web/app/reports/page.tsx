@@ -1,67 +1,212 @@
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, TrendingDown, Wallet, Scale } from 'lucide-react';
-import { api } from '../../lib/api';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { TrendingUp, TrendingDown, Wallet, Scale, AlertCircle, FileText } from "lucide-react";
+import { api } from "../../lib/api";
+import type { AgingRow, GLLine, GLSummary } from "../../lib/api";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { StatusBadge } from "../../components/ui/StatusBadge";
 
-const fmt = (n: number) => (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR' });
+const fmt = (n: number | string | undefined) => (Number(n ?? 0)).toLocaleString("en-MY", { style: "currency", currency: "MYR" });
+const today = () => new Date().toISOString().slice(0, 10);
+const monthStart = () => {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+};
 
 export default function ReportsPage() {
-  const pnl = useQuery({ queryKey: ['pnl'], queryFn: () => api.pnl() });
-  const bs = useQuery({ queryKey: ['bs'], queryFn: () => api.balanceSheet() });
+  const pnl = useQuery({ queryKey: ["pnl"], queryFn: () => api.pnl() });
+  const bs = useQuery({ queryKey: ["bs"], queryFn: () => api.balanceSheet() });
+
+  const [arAsOf, setArAsOf] = useState(today());
+  const [apAsOf, setApAsOf] = useState(today());
+  const [glFrom, setGlFrom] = useState(monthStart());
+  const [glTo, setGlTo] = useState(today());
+
+  const arAging = useQuery({ queryKey: ["ar-aging", arAsOf], queryFn: () => api.arAging(arAsOf) });
+  const apAging = useQuery({ queryKey: ["ap-aging", apAsOf], queryFn: () => api.apAging(apAsOf) });
+  const gl = useQuery({ queryKey: ["gl", glFrom, glTo], queryFn: () => api.generalLedger(glFrom, glTo) });
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Financial Reports</h1>
-        <p className="text-sm text-slate-500">Profit &amp; loss and balance sheet at a glance.</p>
+      <PageHeader title="Financial Reports" description="P&L, balance sheet, AR/AP aging and general ledger." />
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">Profit &amp; Loss</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs uppercase text-slate-500"><TrendingUp className="h-4 w-4 text-emerald-600" /> Revenue</div>
+            <div className="mt-2 text-2xl font-semibold tabular-nums">{fmt(pnl.data?.revenue)}</div>
+          </div>
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs uppercase text-slate-500"><TrendingDown className="h-4 w-4 text-rose-600" /> Expenses</div>
+            <div className="mt-2 text-2xl font-semibold tabular-nums">{fmt(pnl.data?.expenses)}</div>
+          </div>
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs uppercase text-slate-500"><Wallet className="h-4 w-4 text-brand-600" /> Net Income</div>
+            <div className={`mt-2 text-2xl font-semibold tabular-nums ${(pnl.data?.netIncome ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+              {fmt(pnl.data?.netIncome)}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">Balance Sheet</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs uppercase text-slate-500"><Scale className="h-4 w-4 text-sky-600" /> Assets</div>
+            <div className="mt-2 text-xl font-semibold tabular-nums">{fmt(bs.data?.assets)}</div>
+          </div>
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <div className="text-xs uppercase text-slate-500">Liabilities</div>
+            <div className="mt-2 text-xl font-semibold tabular-nums">{fmt(bs.data?.liabilities)}</div>
+          </div>
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <div className="text-xs uppercase text-slate-500">Equity</div>
+            <div className="mt-2 text-xl font-semibold tabular-nums">{fmt(bs.data?.equity)}</div>
+          </div>
+          <div className="rounded-lg border bg-white p-5 shadow-sm">
+            <div className="text-xs uppercase text-slate-500">Balanced</div>
+            <div className="mt-2"><StatusBadge status={bs.data?.balanced ? "ISSUED" : "INVALID"} /></div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <AgingTable title="AR Aging (Receivables)" asOf={arAsOf} setAsOf={setArAsOf} data={arAging.data} nameKey="customerName" linkPrefix="/receivables" />
+        <AgingTable title="AP Aging (Payables)" asOf={apAsOf} setAsOf={setApAsOf} data={apAging.data} nameKey="supplierName" linkPrefix="/payables" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-            <TrendingUp className="h-4 w-4 text-emerald-600" /> Revenue
-          </div>
-          <div className="mt-2 text-2xl font-semibold tabular-nums">{fmt(pnl.data?.revenue ?? 0)}</div>
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">General Ledger</h2>
+        <div className="mb-3 flex flex-wrap items-end gap-3 rounded-lg border bg-white p-3 text-sm">
+          <label className="flex items-center gap-2">From <input type="date" className="rounded border px-2 py-1" value={glFrom} onChange={(e) => setGlFrom(e.target.value)} /></label>
+          <label className="flex items-center gap-2">To <input type="date" className="rounded border px-2 py-1" value={glTo} onChange={(e) => setGlTo(e.target.value)} /></label>
+          <span className="ml-auto text-xs text-slate-500">{(gl.data?.lines ?? []).length} lines • {(gl.data?.accounts ?? []).length} accounts</span>
         </div>
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-            <TrendingDown className="h-4 w-4 text-rose-600" /> Expenses
-          </div>
-          <div className="mt-2 text-2xl font-semibold tabular-nums">{fmt(pnl.data?.expenses ?? 0)}</div>
+        <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+              <tr>
+                <th className="px-3 py-2">Date</th>
+                <th className="px-3 py-2">Journal</th>
+                <th className="px-3 py-2">Account</th>
+                <th className="px-3 py-2">Description</th>
+                <th className="px-3 py-2 text-right">Debit</th>
+                <th className="px-3 py-2 text-right">Credit</th>
+                <th className="px-3 py-2 text-right">Running</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(gl.data?.lines ?? []).slice(0, 200).map((l: GLLine, idx: number) => (
+                <tr key={idx} className="border-t">
+                  <td className="px-3 py-2">{l.date}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{l.journalNumber}</td>
+                  <td className="px-3 py-2"><span className="font-mono text-xs text-slate-500">{l.accountCode}</span> {l.accountName}</td>
+                  <td className="px-3 py-2 text-slate-600">{l.description}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{Number(l.debit) ? fmt(l.debit) : ""}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{Number(l.credit) ? fmt(l.credit) : ""}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-slate-500">{fmt(l.runningBalance)}</td>
+                </tr>
+              ))}
+              {(gl.data?.lines ?? []).length === 0 && (
+                <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-500">No journal entries in range.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-            <Wallet className="h-4 w-4 text-brand-600" /> Net Income
-          </div>
-          <div className={`mt-2 text-2xl font-semibold tabular-nums ${(pnl.data?.netIncome ?? 0) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-            {fmt(pnl.data?.netIncome ?? 0)}
-          </div>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-            <Scale className="h-4 w-4 text-sky-600" /> Assets
+        {(gl.data?.accounts ?? []).length > 0 && (
+          <div className="mt-4 overflow-x-auto rounded-lg border bg-white shadow-sm">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-3 py-2">Account</th>
+                  <th className="px-3 py-2 text-right">Opening</th>
+                  <th className="px-3 py-2 text-right">Debit</th>
+                  <th className="px-3 py-2 text-right">Credit</th>
+                  <th className="px-3 py-2 text-right">Closing</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(gl.data?.accounts ?? []).map((a: GLSummary) => (
+                  <tr key={a.accountId} className="border-t">
+                    <td className="px-3 py-2"><span className="font-mono text-xs text-slate-500">{a.accountCode}</span> {a.accountName}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmt(a.opening)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmt(a.debit)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{fmt(a.credit)}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(a.closing)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="mt-2 text-xl font-semibold tabular-nums">{fmt(bs.data?.assets ?? 0)}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <div className="text-xs uppercase text-slate-500">Liabilities</div>
-          <div className="mt-2 text-xl font-semibold tabular-nums">{fmt(bs.data?.liabilities ?? 0)}</div>
-        </div>
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-          <div className="text-xs uppercase text-slate-500">Equity</div>
-          <div className="mt-2 text-xl font-semibold tabular-nums">{fmt(bs.data?.equity ?? 0)}</div>
-        </div>
-        <div className={`rounded-lg border p-5 shadow-sm ${bs.data?.balanced ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'}`}>
-          <div className="text-xs uppercase text-slate-500">Balance Check</div>
-          <div className={`mt-2 text-xl font-semibold ${bs.data?.balanced ? 'text-emerald-700' : 'text-rose-700'}`}>
-            {bs.data?.balanced ? 'Balanced ✓' : 'Out of balance'}
-          </div>
-        </div>
-      </div>
+        )}
+      </section>
     </div>
+  );
+}
+
+function AgingTable({
+  title, asOf, setAsOf, data, nameKey, linkPrefix,
+}: {
+  title: string;
+  asOf: string;
+  setAsOf: (s: string) => void;
+  data: { asOf: string; rows: AgingRow[]; totals: AgingRow["buckets"] } | undefined;
+  nameKey: "customerName" | "supplierName";
+  linkPrefix: string;
+}) {
+  return (
+    <section>
+      <div className="mb-2 flex items-end justify-between">
+        <h2 className="text-sm font-semibold text-slate-700">{title}</h2>
+        <label className="text-xs text-slate-500">As of <input type="date" className="ml-1 rounded border px-2 py-1" value={asOf} onChange={(e) => setAsOf(e.target.value)} /></label>
+      </div>
+      <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2 text-right">Current</th>
+              <th className="px-3 py-2 text-right">1-30</th>
+              <th className="px-3 py-2 text-right">31-60</th>
+              <th className="px-3 py-2 text-right">61-90</th>
+              <th className="px-3 py-2 text-right">90+</th>
+              <th className="px-3 py-2 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data?.rows ?? []).map((r, idx) => (
+              <tr key={idx} className="border-t">
+                <td className="px-3 py-2">{(r as unknown as Record<string, unknown>)[nameKey] as string}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.current)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d1_30)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d31_60)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d61_90)}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-rose-700">{fmt(r.buckets.d90_plus)}</td>
+                <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(r.buckets.total)}</td>
+              </tr>
+            ))}
+            {(data?.rows ?? []).length === 0 && (
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-500">No outstanding balances.</td></tr>
+            )}
+          </tbody>
+          <tfoot className="border-t bg-slate-50 font-medium">
+            <tr>
+              <td className="px-3 py-2">Total</td>
+              <td className="px-3 py-2 text-right tabular-nums">{fmt(data?.totals?.current)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{fmt(data?.totals?.d1_30)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{fmt(data?.totals?.d31_60)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{fmt(data?.totals?.d61_90)}</td>
+              <td className="px-3 py-2 text-right tabular-nums text-rose-700">{fmt(data?.totals?.d90_plus)}</td>
+              <td className="px-3 py-2 text-right tabular-nums">{fmt(data?.totals?.total)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
   );
 }

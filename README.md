@@ -21,23 +21,43 @@ front end, packaged as a self-contained Docker Compose stack.
 - **Persistent state on the host** — Postgres files and uploads live
   under `infra/data/`, surviving `docker compose down` (no `-v`).
 - **Clean Swagger docs** — visit `/api/docs` after starting the stack.
+- **MyInvois UBL 2.1 v1.1** — full mapper for invoice, credit-note,
+  debit-note, refund-note and self-billed variants with allowance/charge,
+  MSIC code, multi-line address, contact (email/phone) and per-currency
+  precision.  See [docs/einvoice.md](docs/einvoice.md) for the full
+  reference.
+- **Recurring invoices** — weekly/monthly/quarterly/yearly templates that
+  auto-generate real customer invoices.
+- **Customer & supplier payments** with automatic invoice application
+  and GL post (DR/CR Bank, AR/AP).
+- **Credit / debit notes** with auto-GL post (sales returns, supplier
+  additional charges).
+- **Audit log** — every key action is recorded for traceability.
+- **Reports** — P&L, balance sheet, AR/AP aging, general ledger with
+  per-account running balance.
 
 ## Modules
 
-| Module        | Description                                       |
-| ------------- | ------------------------------------------------- |
-| `auth`        | JWT login, bcrypt password hashing                |
-| `account-books` | Multi-company support                          |
-| `gl`          | Chart of accounts, journals, tax codes, fiscal years, trial balance |
-| `ar`          | Customers, AR invoices (with tax + line totals, **auto GL post**)    |
-| `ap`          | Suppliers, AP bills (**auto GL post**)                              |
-| `sales`       | Sales orders + **convert-to-invoice** flow                          |
-| `purchase`    | Purchase orders                                                    |
-| `stock`       | Items, low-stock alerts                                            |
-| `dashboard`   | KPI summary + quick actions                                        |
-| `reports`     | P&L, balance sheet                                                 |
-| `einvoice`    | MyInvois / LHDNM e-invoice submission + lifecycle + recent docs   |
-| `health`      | Container / app liveness                                           |
+| Module            | Description                                                                  |
+| ----------------- | ---------------------------------------------------------------------------- |
+| `auth`            | JWT login, bcrypt password hashing                                           |
+| `account-books`   | Multi-company support                                                         |
+| `gl`              | Chart of accounts, journals, tax codes, fiscal years, trial balance, posting |
+| `ar`              | Customers, AR invoices (with tax + line totals, **auto GL post**)            |
+| `ap`              | Suppliers, AP bills (**auto GL post**)                                       |
+| `sales`           | Sales orders + **convert-to-invoice** flow                                   |
+| `purchase`        | Purchase orders                                                               |
+| `stock`           | Items, stock movements, low-stock alerts                                     |
+| `dashboard`       | KPI summary + quick actions                                                   |
+| `reports`         | P&L, balance sheet, AR/AP aging, general ledger                               |
+| `einvoice`        | MyInvois / LHDNM e-invoice submission + lifecycle + recent docs              |
+| `payments`        | Customer & supplier payments with auto-GL post and invoice application       |
+| `credit-notes`    | Credit notes (sales returns / refunds) with auto-GL post                     |
+| `debit-notes`     | Debit notes (supplier additional charges) with auto-GL post                  |
+| `bank-accounts`   | Cash & bank accounts linked to GL                                            |
+| `recurring`       | Recurring invoice templates (weekly / monthly / quarterly / yearly)          |
+| `audit-log`       | Entity-level activity feed                                                    |
+| `health`          | Container / app liveness                                                      |
 
 ## Quick start
 

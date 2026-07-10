@@ -17,6 +17,44 @@ root as the current directory unless stated otherwise.
 All scripts accept `-Build`, `-Volumes`, `-Prune`, or `-Force` where relevant.
 Run `Get-Help .\scripts\<name>.ps1 -Full` for parameter details.
 
+## Audit log
+
+Every successful `POST/PUT/PATCH/DELETE` controller call is recorded in
+the `AuditLog` table via the global `AuditInterceptor`.  Two ways an
+audit row appears:
+
+- **Explicit** — services call `AuditLogService.record({...})` for
+  high-value events (payments, e-invoice submissions, cancellations).
+- **Implicit** — the global `AuditInterceptor` runs after every
+  successful mutation and infers the entity from the URL path.
+
+This means a /api/ar/invoices POST always appears in the activity log
+even when the AR service does not explicitly call `record()`.
+
+Useful queries:
+
+```sql
+-- latest 50 events for a book
+SELECT action, entity, "createdAt", "userId" FROM "AuditLog"
+WHERE "accountBookId" = $1
+ORDER BY "createdAt" DESC LIMIT 50;
+
+-- all submissions of an invoice
+SELECT * FROM "AuditLog"
+WHERE entity = 'EinvoiceSubmission' AND metadata->>'invoiceId' = $1
+ORDER BY "createdAt" DESC;
+```
+
+The UI surfaces this under **Activity** in the sidebar.
+
+## Pre-submission UBL validation
+
+Every submission runs `validateUblDocument` (see `docs/einvoice.md`) and
+the submit endpoint refuses to talk to MyInvois if the report contains
+errors.  Use the standalone `POST /api/einvoice/invoices/:id/validate`
+endpoint (or the **Validate** button on an invoice detail page) to
+pre-check documents before pressing **Submit**.
+
 ## Backup strategy
 
 The persistent data tree (`infra/data/`) is the **single source of truth**.

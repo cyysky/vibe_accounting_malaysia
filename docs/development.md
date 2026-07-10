@@ -97,6 +97,54 @@ container running `next dev` (see `docs/operations.md` for the pattern).
 
 ## Tests
 
+The test stack has three layers, all of which must pass before merging.
+
+### 1. API unit tests (Jest, in-process)
+
+Fast, no database, no network.  Run from `apps/api`:
+
+```bash
+npm test           # runs every *.spec.ts under src/
+```
+
+Covers GL, posting, e-invoice mapper + validator, recurring, stock, AR,
+auth, credit notes, bank accounts.
+
+### 2. Live HTTP smoke (Node, end-to-end CLI)
+
+Talks to the API over HTTP using the seeded admin user.  Idempotent;
+re-running adds a fresh invoice/bill/payment each time so the same
+counters that used to be a problem with raw doc IDs are handled by
+the `DocumentSequence` service.
+
+```bash
+node scripts/smoke.mjs
+```
+
+### 3. Live HTTP e2e (Jest, talks to running API)
+
+Three Jest suites under `apps/api/test/`:
+
+| Suite                      | Focus                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `happy-path.live-spec.ts`  | AR/AP sales cycle + auto-POSTED journals + aging reports + audit + bank recon. |
+| `auth-matrix.live-spec.ts` | 401 on every protected read without a token; 200/201 with the seeded admin.    |
+| `einvoice.live-spec.ts`    | UBL pre-submission validator endpoint + `validateOnly: true` on `/submit`.     |
+
+Run with the API already up:
+
+```bash
+# PowerShell
+$env:API_BASE_URL='http://localhost:8080'
+cd apps/api && npx jest --config test/jest-e2e.json
+```
+
+or via the helper script:
+
+```bash
+./apps/api/.run-e2e.cmd
+```
+
 ### API unit tests
 
 ```bash

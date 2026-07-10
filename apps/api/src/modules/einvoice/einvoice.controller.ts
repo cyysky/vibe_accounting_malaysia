@@ -42,6 +42,16 @@ export class EinvoiceController {
   }
 
   // --- Submissions ---
+  @Post('invoices/:id/validate')
+  validate(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: SubmitInvoiceDto,
+  ) {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.validateInvoice(user.accountBookId, id, dto);
+  }
+
   @Post('invoices/:id/submit')
   submit(
     @CurrentUser() user: AuthUser,

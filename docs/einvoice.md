@@ -138,6 +138,59 @@ Mandatory party fields:
 
 The mapper throws on missing TIN at the API layer.
 
+## Pre-submission validation
+
+Before every submission we run a 100% in-process UBL 2.1 v1.1 conformance
+check (`validateUblDocument` in
+`apps/api/src/modules/einvoice/validators/ubl.validator.ts`).  This lets the
+UI surface problems *before* the document is sent to MyInvois.
+
+The validator checks for:
+
+- All MyInvois-mandated header fields (`ID`, `IssueDate`,
+  `DocumentCurrencyCode`, `LegalMonetaryTotal`, `TaxTotal`).
+- `PayableAmount == TaxInclusiveAmount` per the MyInvois v1.1 spec.
+- Every monetary total carries a `currencyID` attribute.
+- Supplier `PartyIdentification` + `PartyTaxScheme/CompanyID` is populated
+  and schemeID is `TIN`.
+- Customer `PartyIdentification` has a value and recognised schemeID
+  (`TIN`, `BRN`, `NRIC`, `PASSPORT`, `ARMY`).
+- IndustryClassificationCode (MSIC) is 5-digit numeric.
+- Each `InvoiceLine` declares `Item` (Description or Name), a positive
+  `InvoicedQuantity` + a `Price/PriceAmount` and at least one
+  `TaxCategory/TaxSubtotal`.
+- Every `TaxCategory` declares a `TaxTypeCode` in the MyInvois
+  enumeration (`01`-`06` or `E`); `E` requires a `TaxExemptionReason`.
+
+The validator returns a structured report:
+
+```ts
+interface UblValidationResult {
+  valid: boolean;
+  documentHash: string;   // short deterministic hash for UI display
+  documentType: string;   // invoice, credit-note, …
+  documentVersion: string; // '1.1'
+  issues: Array<{ code: string; severity: 'error' | 'warning'; message: string; path?: string }>;
+  summary: { errors: number; warnings: number };
+}
+```
+
+Two ways to use it:
+
+| Trigger                                  | Endpoint                                                            |
+| ---------------------------------------- | ------------------------------------------------------------------- |
+| Manual check from the invoice detail UI  | `POST /api/einvoice/invoices/:id/validate`                          |
+| Same call with `validateOnly: true`      | `POST /api/einvoice/invoices/:id/submit { validateOnly: true }`     |
+
+The submit endpoint refuses to talk to MyInvois if the validator reports
+one or more errors.  It will not throw when there are only warnings
+(missing customer PartyTaxScheme, MSIC not 5 digits, etc.) — those are
+recommendations per the spec.
+
+In the invoice detail page the **Validate** button (`ShieldCheck` icon)
+calls the validator and renders an amber / emerald panel summarising the
+results.
+
 ## Submission lifecycle
 
 ```

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Send, RefreshCcw, ExternalLink, Wallet, FileMinus2 } from 'lucide-react';
+import { ArrowLeft, Send, RefreshCcw, ExternalLink, Wallet, FileMinus2, ShieldCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
@@ -66,7 +66,25 @@ export default function InvoiceDetailPage() {
       qc.invalidateQueries({ queryKey: ['invoice', id] });
       qc.invalidateQueries({ queryKey: ['einvoice-submissions', id] });
     },
-    onError: (e: Error) => { setSubmitError(e.message); setSubmitSuccess(null); },
+    onError: (e: unknown) => {
+      const anyErr = e as Error & { response?: { data?: { message?: string } } };
+      setSubmitError(anyErr?.response?.data?.message ?? (anyErr as Error).message);
+      setSubmitSuccess(null);
+    },
+  });
+  const validate = useMutation({
+    mutationFn: () => api.validateEinvoice(id, { version: '1.1', format: 'JSON' }),
+    onSuccess: () => {
+      setSubmitSuccess(null);
+      setSubmitError(null);
+    },
+    onError: (e: unknown) => {
+      // Nest BadRequest with `validation` body carries the full report.
+      const anyErr = e as Error & { response?: { data?: { message?: string; validation?: { issues?: { message?: string }[] } } } };
+      setSubmitSuccess(null);
+      const msg = anyErr?.response?.data?.message ?? (anyErr as Error).message;
+      setSubmitError(msg);
+    },
   });
   const poll = useMutation({
     mutationFn: (subId: string) => api.pollEinvoiceSubmission(subId),
@@ -165,6 +183,14 @@ export default function InvoiceDetailPage() {
         <div className="border-b px-4 py-3 text-sm font-semibold text-slate-700">MyInvois (LHDNM e-Invoice)</div>
         <div className="p-4">
           <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => validate.mutate()}
+              loading={validate.isPending}
+              variant="secondary"
+              title="Run MyInvois UBL pre-submission validation without contacting the API"
+            >
+              <ShieldCheck className="h-4 w-4" /> Validate
+            </Button>
             <Button onClick={() => submit.mutate()} loading={submit.isPending} variant="primary">
               <Send className="h-4 w-4" /> Submit to MyInvois
             </Button>
@@ -176,6 +202,30 @@ export default function InvoiceDetailPage() {
           </div>
           {submitSuccess && <p className="mt-3 text-sm text-emerald-700">{submitSuccess}</p>}
           {submitError && <p className="mt-3 text-sm text-rose-600">{submitError}</p>}
+          {validate.data && (
+            <div className={'mt-3 rounded-md border p-3 text-sm ' + (validate.data.valid ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50')}>
+              <div className="flex items-center gap-2 font-semibold">
+                {validate.data.valid ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                )}
+                <span>{validate.data.valid ? 'Valid - ready to submit' : 'Issues found - review before submission'}</span>
+                <span className="ml-auto font-mono text-xs text-slate-500">{validate.data.documentType} v{validate.data.documentVersion}</span>
+              </div>
+              {validate.data.issues.length > 0 && (
+                <ul className="mt-2 space-y-1 text-xs">
+                  {validate.data.issues.map((i, idx) => (
+                    <li key={idx} className={i.severity === 'error' ? 'text-rose-700' : 'text-amber-700'}>
+                      <span className="font-mono uppercase">{i.severity}</span>
+                      {i.path ? <span className="ml-1 font-mono text-slate-500">{i.path}</span> : null}
+                      <span className="ml-1">{i.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {(subs.data ?? []).length > 0 && (
             <table className="mt-4 w-full text-sm">

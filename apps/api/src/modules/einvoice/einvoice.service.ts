@@ -6,7 +6,14 @@ import { EinvoiceSettingsService } from './einvoice.config';
 import { MyInvoisClient } from './clients/myinvois.client';
 import { JsonSigner } from './signers/json-signer';
 import { buildUblInvoice } from './mappers/invoice-v1.1.mapper';
-import { CreateEinvoiceConfigDto, UpdateEinvoiceConfigDto } from './dto/config.dto';
+import {
+  CreateEinvoiceConfigDto,
+  SubmitInvoiceDto,
+  UpdateEinvoiceConfigDto,
+} from './dto/config.dto';
+import type { UblDocument } from './mappers/invoice-v1.1.mapper';
+import type { UblValidationResult } from './validators/ubl.validator';
+import { validateUblDocument } from "./validators/ubl.validator";
 
 @Injectable()
 export class EinvoiceService {
@@ -77,7 +84,54 @@ export class EinvoiceService {
   }
 
   // --- Submission -----------------------------------------------------------
-  async submitInvoice(bookId: string, invoiceId: string, opts: { version?: string; format?: string }) {
+
+  /**
+   * Build the UBL 2.1 document for a customer invoice using the active
+   * MyInvois config + the tax codes of the account book.  Re-usable from
+   * `submitInvoice` (with validation) and the dedicated
+   * `validateInvoice` endpoint.
+   */
+  async buildUblInvoiceForInvoice(bookId: string, customerInvoiceId: string, version: '1.0' | '1.1', format: 'JSON' | 'XML') {
+    const invoice = await this.prisma.customerInvoice.findUnique({
+      where: { id: customerInvoiceId },
+      include: { lines: { include: { item: true, taxCode: true } }, customer: true },
+    });
+    if (!invoice || invoice.accountBookId !== bookId) {
+      throw new NotFoundException(`Invoice ${customerInvoiceId} not found in this account book`);
+    }
+    const { cfg, supplier } = await this.resolveSupplier(bookId);
+    const taxCodes = new Map(
+      (await this.prisma.taxCode.findMany({ where: { accountBookId: bookId } })).map((t) => [t.id, t]),
+    );
+    return buildUblInvoice({
+      invoice,
+      customer: invoice.customer,
+      supplier,
+      taxCodes,
+      version,
+      format,
+    }) as UblDocument;
+  }
+
+  private async resolveSupplier(bookId: string) {
+    const cfg = await this.resolveConfig(bookId, EinvoiceEnvironment.SANDBOX);
+    const book = await this.prisma.accountBook.findUnique({ where: { id: bookId } });
+    return {
+      cfg,
+      supplier: {
+        tin: cfg.taxpayerTin,
+        brn: cfg.taxpayerBrn ?? null,
+        name: cfg.taxpayerName ?? book?.name ?? 'Demo Company Sdn Bhd',
+        msic: book?.industryCode ?? undefined,
+      },
+    };
+  }
+
+  /**
+   * Run pre-submission validation without talking to MyInvois. Useful from the UI
+   * to surface validation problems before the user clicks Submit.
+   */
+  async validateInvoice(bookId: string, invoiceId: string, opts: SubmitInvoiceDto = {}): Promise<UblValidationResult> {
     const invoice = await this.prisma.customerInvoice.findUnique({
       where: { id: invoiceId },
       include: { lines: { include: { item: true, taxCode: true } }, customer: true },
@@ -85,28 +139,39 @@ export class EinvoiceService {
     if (!invoice || invoice.accountBookId !== bookId) {
       throw new NotFoundException(`Invoice ${invoiceId} not found in this account book`);
     }
-    const cfg = await this.resolveConfig(bookId, EinvoiceEnvironment.SANDBOX);
-    const taxCodes = new Map(
-      (await this.prisma.taxCode.findMany({ where: { accountBookId: bookId } })).map((t) => [t.id, t]),
-    );
-    const book = await this.prisma.accountBook.findUnique({ where: { id: bookId } });
-    const supplier = {
-      tin: cfg.taxpayerTin,
-      brn: cfg.taxpayerBrn ?? null,
-      name: cfg.taxpayerName ?? book?.name ?? 'Demo Company Sdn Bhd',
-      msic: book?.industryCode ?? undefined,
-    };
     const v = (opts.version ?? '1.1') as '1.1' | '1.0';
-    const ubl = buildUblInvoice({
-      invoice,
-      customer: invoice.customer,
-      supplier,
-      taxCodes,
-      version: v,
-      format: (opts.format ?? 'JSON') as 'JSON' | 'XML',
-    });
+    const ubl = await this.buildUblInvoiceForInvoice(bookId, invoiceId, v, (opts.format ?? 'JSON') as 'JSON' | 'XML');
+    return validateUblDocument(ubl);
+  }
 
-    const payloadString = JSON.stringify(ubl);
+  async submitInvoice(bookId: string, invoiceId: string, opts: SubmitInvoiceDto) {
+    const invoice = await this.prisma.customerInvoice.findUnique({
+      where: { id: invoiceId },
+      include: { lines: { include: { item: true, taxCode: true } }, customer: true },
+    });
+    if (!invoice || invoice.accountBookId !== bookId) {
+      throw new NotFoundException(`Invoice ${invoiceId} not found in this account book`);
+    }
+    const { cfg } = await this.resolveSupplier(bookId);
+    const v = (opts.version ?? '1.1') as '1.1' | '1.0';
+    const ublDoc = await this.buildUblInvoiceForInvoice(bookId, invoiceId, v, (opts.format ?? 'JSON') as 'JSON' | 'XML');
+    const validation = validateUblDocument(ublDoc);
+    if (opts.validateOnly) {
+      return {
+        submissionId: null,
+        submissionUid: null,
+        accepted: [],
+        rejected: [],
+        validation,
+      };
+    }
+    if (!validation.valid) {
+      throw new BadRequestException({
+        message: `UBL document failed pre-submission validation (${validation.summary.errors} error(s))`,
+        validation,
+      });
+    }
+    const payloadString = JSON.stringify(ublDoc);
     let signature: string;
     let digest: string;
     if (cfg.certPath && this.config.get<string>('DISABLE_SIGNING') !== '1') {
@@ -120,8 +185,7 @@ export class EinvoiceService {
       this.logger.warn('Submitting with placeholder signature (DISABLE_SIGNING=1 or no cert). MyInvois will reject.');
     }
 
-    // Track the submission in the DB BEFORE the network call so retries
-    // can be traced.
+    // Track the submission in the DB BEFORE the network call so retries can be traced.
     const submission = await this.prisma.einvoiceSubmission.create({
       data: {
         accountBookId: bookId,

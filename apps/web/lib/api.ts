@@ -579,6 +579,20 @@ class ApiClient {
     return this.request<void>('DELETE', `/einvoice/configs/${id}`);
   }
 
+  validateEinvoice(
+    invoiceId: string,
+    opts: { version?: string; format?: string; validateOnly?: boolean } = {},
+  ): Promise<{
+    valid: boolean;
+    documentHash: string;
+    documentType: string;
+    documentVersion: string;
+    issues: Array<{ code: string; severity: 'error' | 'warning'; message: string; path?: string }>;
+    warnings: Array<{ code: string; severity: 'warning'; message: string; path?: string }>;
+    summary: { errors: number; warnings: number };
+  }> {
+    return this.request('POST', `/einvoice/invoices/${invoiceId}/validate`, opts);
+  }
   submitEinvoice(invoiceId: string, opts?: { version?: string; format?: string }): Promise<{ submissionId: string; submissionUid?: string; accepted: unknown[]; rejected: unknown[] }> {
     return this.request('POST', `/einvoice/invoices/${invoiceId}/submit`, opts ?? {});
   }

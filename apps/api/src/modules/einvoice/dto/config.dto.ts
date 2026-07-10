@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EinvoiceEnvironment } from '@prisma/client';
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateEinvoiceConfigDto {
   @ApiProperty({ enum: EinvoiceEnvironment, default: EinvoiceEnvironment.SANDBOX })
@@ -29,6 +30,7 @@ export class UpdateEinvoiceConfigDto {
 export class SubmitInvoiceDto {
   @ApiPropertyOptional({ default: '1.1' }) @IsOptional() @IsString() version?: string;
   @ApiPropertyOptional({ default: 'JSON' }) @IsOptional() @IsString() format?: string;
+  @ApiPropertyOptional({ default: false, description: 'If true, only validate the UBL document and do not submit to MyInvois.' }) @IsOptional() @Type(() => Boolean) @IsBoolean() validateOnly?: boolean;
 }
 
 export class CancelDocumentDto {

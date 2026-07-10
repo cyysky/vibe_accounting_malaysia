@@ -11,6 +11,7 @@ import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
 import { Modal } from '../../../components/ui/Modal';
 import { Field, Input, Textarea, Badge } from '../../../components/ui/Form';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const lineSchema = z.object({
   accountId: z.string().min(1, 'Required'),
@@ -89,15 +90,17 @@ export default function JournalPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Journal Entries</h1>
-          <p className="text-sm text-slate-500">Manual journal vouchers. Must balance.</p>
-        </div>
+      <PageHeader
+        title="Journal Entries"
+        description="Manual journal vouchers. Must balance."
+        actions={
+          <>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" /> New Journal
         </Button>
-      </div>
+          </>
+        }
+      />
 
       <DataTable
         data={journals.data?.data ?? []}

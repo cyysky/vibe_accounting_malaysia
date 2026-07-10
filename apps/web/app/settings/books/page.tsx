@@ -9,6 +9,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { Field, Input, Badge } from '../../../components/ui/Form';
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 interface Form {
   code: string;
@@ -43,15 +44,17 @@ export default function AccountBooksPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Account Books</h1>
-          <p className="text-sm text-slate-500">Logical companies within your Vibe Accounting workspace.</p>
-        </div>
+      <PageHeader
+        title="Account Books"
+        description="Logical companies within your Vibe Accounting workspace."
+        actions={
+          <>
         <Button onClick={() => { form.reset({ code: '', name: '', baseCurrency: 'MYR' }); setShow(true); }}>
           <Plus className="h-4 w-4" /> New Account Book
         </Button>
-      </div>
+          </>
+        }
+      />
 
       <DataTable
         data={books.data ?? []}

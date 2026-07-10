@@ -367,6 +367,38 @@ class ApiClient {
     return this.request<AuthUser>('GET', '/auth/profile');
   }
 
+  listUsers(): Promise<AuthUser[]> {
+    return this.request<AuthUser[]>('GET', '/auth/users');
+  }
+
+  createUser(input: { email: string; name: string; password: string; role: AuthUser['role']; accountBookId?: string }): Promise<AuthUser> {
+    return this.request<AuthUser>('POST', '/auth/users', input);
+  }
+
+  updateUser(id: string, patch: { name?: string; role?: AuthUser['role']; active?: boolean }): Promise<AuthUser> {
+    return this.request<AuthUser>('PATCH', `/auth/users/${id}`, patch);
+  }
+
+  deleteUser(id: string): Promise<{ ok: true }> {
+    return this.request<{ ok: true }>('DELETE', `/auth/users/${id}`);
+  }
+
+  exportCsv(path: string): void {
+    const url = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api') + path;
+    fetch(url, { headers: this.token ? { Authorization: `Bearer ${this.token}` } : {} })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const a = document.createElement('a');
+        const obj = URL.createObjectURL(blob);
+        a.href = obj;
+        a.download = path.replace(/^\//, '').replace(/\//g, '-') + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(obj);
+      });
+  }
+
   // --- Account books ---
   accountBooks(): Promise<AccountBook[]> {
     return this.request<AccountBook[]>('GET', '/account-books');
@@ -701,6 +733,10 @@ class ApiClient {
     return this.request<void>('DELETE', `/bank-accounts/${id}`);
   }
 
+  bankReconciliation(id: string): Promise<BankReconciliation> {
+    return this.request<BankReconciliation>('GET', `/bank-accounts/${id}/reconciliation`);
+  }
+
   // --- Recurring invoices ---
   recurringInvoices(): Promise<RecurringInvoice[]> {
     return this.request<RecurringInvoice[]>('GET', '/recurring');
@@ -775,6 +811,23 @@ export interface DebitNote {
   total: number;
   status: 'DRAFT' | 'ISSUED' | 'APPLIED' | 'VOID';
   lines: Array<{ id?: string; description: string; quantity: number; unitPrice: number; discount?: number; taxCodeId?: string; taxAmount?: number; subtotal?: number; total?: number; lineNo?: number }>;
+}
+
+export interface BankReconciliation {
+  bankAccount: BankAccount;
+  glAccount: { id: string; code: string; name: string } | null;
+  openingBalance: number;
+  glBalance: number;
+  statementBalance: number;
+  difference: number;
+  lines: Array<{
+    id: string;
+    date: string;
+    journalNumber: string;
+    description: string;
+    debit: number;
+    credit: number;
+  }>;
 }
 
 export interface BankAccount {

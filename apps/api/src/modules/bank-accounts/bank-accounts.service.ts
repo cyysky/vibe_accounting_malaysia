@@ -61,4 +61,53 @@ export class BankAccountsService {
     const a = await this.prisma.bankAccount.findUnique({ where: { id } });
     if (!a) throw new NotFoundException(`Bank account ${id} not found`);
   }
+  async reconciliation(bookId: string, bankAccountId: string) {
+    const ba = await this.prisma.bankAccount.findFirst({
+      where: { id: bankAccountId, accountBookId: bookId },
+    });
+    if (!ba) throw new NotFoundException(`Bank account ${bankAccountId} not found in this book`);
+
+    const glAccount = await this.prisma.account.findUnique({
+      where: { accountBookId_code: { accountBookId: bookId, code: ba.glAccountCode } },
+    });
+    if (!glAccount) {
+      return {
+        bankAccount: ba,
+        glAccount: null,
+        openingBalance: Number(ba.openingBalance),
+        glBalance: 0,
+        statementBalance: Number(ba.openingBalance),
+        difference: 0,
+        lines: [],
+      };
+    }
+
+    const lines = await this.prisma.journalLine.findMany({
+      where: { accountId: glAccount.id, journal: { accountBookId: bookId, status: "POSTED" } },
+      include: { journal: true },
+      orderBy: { journal: { date: "desc" } },
+      take: 200,
+    });
+
+    const totalMovements = lines.reduce((s, l) => s + (Number(l.debit) - Number(l.credit)), 0);
+    const glBalance = Number(ba.openingBalance) + totalMovements;
+
+    return {
+      bankAccount: ba,
+      glAccount: { id: glAccount.id, code: glAccount.code, name: glAccount.name },
+      openingBalance: Number(ba.openingBalance),
+      glBalance,
+      statementBalance: Number(ba.openingBalance),
+      difference: glBalance - Number(ba.openingBalance),
+      lines: lines.map((l) => ({
+        id: l.id,
+        date: l.journal.date.toISOString().slice(0, 10),
+        journalNumber: l.journal.number,
+        description: l.description ?? l.journal.description,
+        debit: Number(l.debit),
+        credit: Number(l.credit),
+      })),
+    };
+  }
+
 }

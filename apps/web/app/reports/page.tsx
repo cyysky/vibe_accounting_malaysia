@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown, Wallet, Scale, AlertCircle, FileText } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Scale, AlertCircle, FileText, Download } from "lucide-react";
 import { api } from "../../lib/api";
 import type { AgingRow, GLLine, GLSummary } from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { Button } from "../../components/ui/Button";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 
 const fmt = (n: number | string | undefined) => (Number(n ?? 0)).toLocaleString("en-MY", { style: "currency", currency: "MYR" });
@@ -30,7 +31,28 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Financial Reports" description="P&L, balance sheet, AR/AP aging and general ledger." />
+      <PageHeader
+        title="Financial Reports"
+        description="P&L, balance sheet, AR/AP aging and general ledger."
+        actions={<>
+          <Button variant="secondary" size="sm" onClick={() => api.exportCsv("/reports/export/profit-and-loss.csv")}>
+            <Download className="h-3.5 w-3.5" /> P&amp;L CSV
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => api.exportCsv("/reports/export/balance-sheet.csv")}>
+            <Download className="h-3.5 w-3.5" /> BS CSV
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => api.exportCsv(`/reports/export/ar-aging.csv?asOf=${arAsOf}`)}>
+            <Download className="h-3.5 w-3.5" /> AR CSV
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => api.exportCsv(`/reports/export/ap-aging.csv?asOf=${apAsOf}`)}>
+            <Download className="h-3.5 w-3.5" /> AP CSV
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => api.exportCsv(`/reports/export/general-ledger.csv?from=${glFrom}&to=${glTo}`)}>
+            <Download className="h-3.5 w-3.5" /> GL CSV
+          </Button>
+        </>
+      }
+      />
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-slate-700">Profit &amp; Loss</h2>

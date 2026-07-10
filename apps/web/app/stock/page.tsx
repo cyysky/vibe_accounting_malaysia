@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { DataTable } from '../../components/ui/DataTable';
 import { Modal } from '../../components/ui/Modal';
 import { Field, Input, Badge } from '../../components/ui/Form';
+import { PageHeader } from '../../components/ui/PageHeader';
 
 const fmt = (n: number) => (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR' });
 
@@ -77,15 +78,17 @@ export default function StockPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Stock / Items</h1>
-          <p className="text-sm text-slate-500">Inventory items and reorder alerts.</p>
-        </div>
+      <PageHeader
+        title="Stock / Items"
+        description="Inventory items and reorder alerts."
+        actions={
+          <>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" /> New Item
         </Button>
-      </div>
+          </>
+        }
+      />
 
       {lowStockCount > 0 && (
         <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

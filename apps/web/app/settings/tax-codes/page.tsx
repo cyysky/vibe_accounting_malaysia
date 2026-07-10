@@ -11,6 +11,7 @@ import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
 import { Modal } from '../../../components/ui/Modal';
 import { Field, Input, Badge } from '../../../components/ui/Form';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const taxCodeSchema = z.object({
   code: z.string().min(1, 'Required'),
@@ -59,15 +60,17 @@ export default function TaxCodesPage() {
   }
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tax Codes</h1>
-          <p className="text-sm text-slate-500">SST / service tax codes used on invoice lines.</p>
-        </div>
+      <PageHeader
+        title="Tax Codes"
+        description="SST / service tax codes used on invoice lines."
+        actions={
+          <>
         <Button onClick={openCreate} variant="primary">
           <Plus className="h-4 w-4" /> New Tax Code
         </Button>
-      </div>
+          </>
+        }
+      />
       <DataTable
         data={taxCodes.data ?? []}
         loading={taxCodes.isLoading}

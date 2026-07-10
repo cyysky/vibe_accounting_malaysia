@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { DataTable } from '../../components/ui/DataTable';
 import { Modal } from '../../components/ui/Modal';
 import { Field, Input, Select, Badge } from '../../components/ui/Form';
+import { PageHeader } from '../../components/ui/PageHeader';
 
 const fmt = (n: number) => (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR' });
 
@@ -83,15 +84,17 @@ export default function PayablesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Payables</h1>
-          <p className="text-sm text-slate-500">Suppliers, bills and outstanding balances.</p>
-        </div>
+      <PageHeader
+        title="Payables"
+        description="Suppliers, bills and outstanding balances."
+        actions={
+          <>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" /> New Supplier
         </Button>
-      </div>
+          </>
+        }
+      />
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-slate-700">Suppliers</h2>

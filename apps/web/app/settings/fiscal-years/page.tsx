@@ -11,6 +11,7 @@ import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
 import { Modal } from '../../../components/ui/Modal';
 import { Field, Input, Badge } from '../../../components/ui/Form';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const fySchema = z.object({
   year: z.coerce.number().int().min(1900),
@@ -53,15 +54,17 @@ export default function FiscalYearsPage() {
   }
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Fiscal Years</h1>
-          <p className="text-sm text-slate-500">Open and closed accounting periods. Journals can only be posted to open years.</p>
-        </div>
+      <PageHeader
+        title="Fiscal Years"
+        description="Open and closed accounting periods. Journals can only be posted to open years."
+        actions={
+          <>
         <Button onClick={openCreate} variant="primary">
           <Plus className="h-4 w-4" /> New Fiscal Year
         </Button>
-      </div>
+          </>
+        }
+      />
 
       <DataTable
         data={(fys.data ?? []) as FiscalYear[]}

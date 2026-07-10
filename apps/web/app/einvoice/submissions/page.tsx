@@ -7,6 +7,7 @@ import { api } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
 import { Badge } from '../../../components/ui/Form';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const fmt = (d?: string) => (d ? new Date(d).toLocaleString('en-MY') : '—');
 
@@ -41,18 +42,20 @@ export default function EinvoiceSubmissionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">MyInvois Submissions</h1>
-          <p className="text-sm text-slate-500">e-Invoice submission history and status. Auto-refreshes every 10 s.</p>
-        </div>
+      <PageHeader
+        title="MyInvois Submissions"
+        description="e-Invoice submission history and status. Auto-refreshes every 10 s."
+        actions={
+          <>
         <div className="flex items-center gap-2">
           {lastSync && <span className="text-xs text-slate-500">Last sync: {lastSync}</span>}
           <Button variant="secondary" size="sm" onClick={() => recent.mutate()} loading={recent.isPending}>
             <Download className="h-3.5 w-3.5" /> Sync recent
           </Button>
         </div>
-      </div>
+          </>
+        }
+      />
 
       <DataTable
         data={subs.data ?? []}

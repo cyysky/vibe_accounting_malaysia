@@ -11,6 +11,7 @@ import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
 import { Modal } from '../../../components/ui/Modal';
 import { Field, Input, Select, Badge } from '../../../components/ui/Form';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const schema = z.object({
   environment: z.enum(['SANDBOX', 'PRODUCTION']),
@@ -53,17 +54,17 @@ export default function EinvoiceConfigPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">MyInvois Configuration</h1>
-          <p className="text-sm text-slate-500">
-            LHDNM e-Invoice API credentials. Get them from the MyInvois developer portal.
-          </p>
-        </div>
+      <PageHeader
+        title="MyInvois Configuration"
+        description="LHDNM e-Invoice API credentials. Get them from the MyInvois developer portal."
+        actions={
+          <>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" /> New Configuration
         </Button>
-      </div>
+          </>
+        }
+      />
 
       <div className="rounded-md border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
         <div className="flex items-center gap-2 font-semibold">

@@ -39,4 +39,10 @@ export class BankAccountsController {
   remove(@Param("id") id: string) {
     return this.svc.remove(id);
   }
+  @Get(":id/reconciliation")
+  reconciliation(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    if (!user.accountBookId) throw new Error("User has no account book");
+    return this.svc.reconciliation(user.accountBookId, id);
+  }
+
 }

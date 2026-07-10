@@ -25,6 +25,7 @@ import {
   Activity,
   FileMinus2,
   FilePlus2,
+  Landmark,
 } from "lucide-react";
 
 const sections = [
@@ -41,6 +42,7 @@ const sections = [
       { href: "/dashboard/books", label: "Chart of Accounts", icon: BookOpen },
       { href: "/dashboard/journal", label: "Journal Entry", icon: ScrollText },
       { href: "/reports", label: "Financial Reports", icon: BarChart3 },
+      { href: "/reports/bank-reconciliation", label: "Bank Reconciliation", icon: Landmark },
     ],
   },
   {

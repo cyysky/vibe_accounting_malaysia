@@ -11,6 +11,7 @@ import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
 import { Modal } from '../../../components/ui/Modal';
 import { Field, Input, Select, Badge } from '../../../components/ui/Form';
+import { PageHeader } from '../../../components/ui/PageHeader';
 
 const accountSchema = z.object({
   code: z.string().min(1, 'Required'),
@@ -69,15 +70,17 @@ export default function ChartOfAccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Chart of Accounts</h1>
-          <p className="text-sm text-slate-500">Your GL account master list.</p>
-        </div>
+      <PageHeader
+        title="Chart of Accounts"
+        description="Your GL account master list."
+        actions={
+          <>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" /> New Account
         </Button>
-      </div>
+          </>
+        }
+      />
 
       <DataTable
         data={accounts.data ?? []}

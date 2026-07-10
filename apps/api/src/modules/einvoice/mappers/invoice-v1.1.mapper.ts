@@ -261,7 +261,24 @@ function buildLine(line: MapperLine, taxCodes: Map<string, TaxCode>, currency: s
       },
     ];
   }
+  const taxCategory: UblDocument = {
+    ID: [{ _: tc ? tc.code : "06" }],
+    Name: [{ _: tc ? tc.name : "Not Applicable" }],
+    Percent: [{ _: tc ? String(Number(tc.rate) * 100) : "0" }],
+    TaxScheme: [{ ID: [{ _: "VAT", schemeID: "UN/ECE 5153", schemeAgencyID: "6" }] }],
+  };
+  // Tax type code per MyInvois spec (01-06 or E)
   if (tc) {
+    const code = tc.taxTypeCode ?? "01";
+    (taxCategory as Record<string, unknown[]>).TaxTypeCode = [{ _: code }];
+  } else {
+    (taxCategory as Record<string, unknown[]>).TaxTypeCode = [{ _: "06" }];
+    (taxCategory as Record<string, unknown[]>).TaxExemptionReason = [
+      { _: "Not Applicable" },
+    ];
+  }
+
+  if (tc || taxAmount > 0) {
     (out as Record<string, unknown[]>)["TaxTotal"] = [
       {
         TaxAmount: [{ _: toString(taxAmount), currencyID: currency }],
@@ -270,14 +287,7 @@ function buildLine(line: MapperLine, taxCodes: Map<string, TaxCode>, currency: s
           {
             TaxableAmount: [{ _: toString(lineSub), currencyID: currency }],
             TaxAmount: [{ _: toString(taxAmount), currencyID: currency }],
-            TaxCategory: [
-              {
-                ID: [{ _: tc.code }],
-                Name: [{ _: tc.name }],
-                Percent: [{ _: String(Number(tc.rate) * 100) }],
-                TaxScheme: [{ ID: [{ _: "VAT", schemeID: "UN/ECE 5153", schemeAgencyID: "6" }] }],
-              },
-            ],
+            TaxCategory: [taxCategory],
           },
         ],
       },
@@ -299,18 +309,22 @@ function groupTaxSubtotals(lines: MapperLine[], taxCodes: Map<string, TaxCode>, 
     cur.tax += tax;
     buckets.set(tc.id, cur);
   }
-  return Array.from(buckets.values()).map((b) => ({
-    TaxableAmount: [{ _: toString(b.taxable), currencyID: currency }],
-    TaxAmount: [{ _: toString(b.tax), currencyID: currency }],
-    TaxCategory: [
-      {
-        ID: [{ _: b.tc.code }],
-        Name: [{ _: b.tc.name }],
-        Percent: [{ _: String(Number(b.tc.rate) * 100) }],
-        TaxScheme: [{ ID: [{ _: "VAT", schemeID: "UN/ECE 5153", schemeAgencyID: "6" }] }],
-      },
-    ],
-  }));
+  return Array.from(buckets.values()).map((b) => {
+    const category: UblDocument = {
+      ID: [{ _: b.tc.code }],
+      Name: [{ _: b.tc.name }],
+      Percent: [{ _: String(Number(b.tc.rate) * 100) }],
+      TaxScheme: [{ ID: [{ _: "VAT", schemeID: "UN/ECE 5153", schemeAgencyID: "6" }] }],
+    };
+    (category as Record<string, unknown[]>).TaxTypeCode = [
+      { _: b.tc.taxTypeCode ?? "01" },
+    ];
+    return {
+      TaxableAmount: [{ _: toString(b.taxable), currencyID: currency }],
+      TaxAmount: [{ _: toString(b.tax), currencyID: currency }],
+      TaxCategory: [category],
+    };
+  });
 }
 
 function toString(n: unknown, fractionDigits = 2): string {

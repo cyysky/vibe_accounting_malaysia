@@ -27,7 +27,7 @@ describe('UBL 2.1 v1.1 mapper', () => {
       invoice: { ...invoice, lines: [{ description: 'Widget', quantity: 2, unitPrice: 50, discount: 0, taxAmount: 8, lineNo: 1, taxCodeId: 't1', taxCode: null, item: null }] },
       customer: baseCustomer,
       supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
-      taxCodes: new Map([['t1', { id: 't1', accountBookId: 'b1', code: 'SVAT-08', name: 'Sales 8%', rate: D(0.08), description: null, active: true }]]),
+      taxCodes: new Map([['t1', { id: 't1', accountBookId: 'b1', code: 'SVAT-08', name: 'Sales 8%', rate: D(0.08), description: null, active: true, taxTypeCode: '01' }]]),
       version: '1.1',
     });
     const ubl = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];

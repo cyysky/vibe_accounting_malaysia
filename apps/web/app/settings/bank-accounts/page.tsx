@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Wallet } from "lucide-react";
+import { Plus, Trash2, Wallet, ArrowRightLeft } from "lucide-react";
 import { api } from "../../../lib/api";
 import type { BankAccount } from "../../../lib/api";
 import { Button } from "../../../components/ui/Button";
@@ -80,9 +81,14 @@ export default function BankAccountsPage() {
           {
             key: "actions", header: "", align: "right",
             render: (r) => (
-              <button onClick={() => confirm(`Delete ${r.name}?`) && remove.mutate(r.id)} className="text-rose-500 hover:text-rose-700">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center justify-end gap-1">
+                <Link href={`/reports/bank-reconciliation?bankAccountId=${r.id}`} title="Bank reconciliation">
+                  <Button size="sm" variant="ghost"><ArrowRightLeft className="h-4 w-4 text-brand-700" /> Reconcile</Button>
+                </Link>
+                <button onClick={() => confirm(`Delete ${r.name}?`) && remove.mutate(r.id)} className="text-rose-500 hover:text-rose-700">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             ),
           },
         ]}

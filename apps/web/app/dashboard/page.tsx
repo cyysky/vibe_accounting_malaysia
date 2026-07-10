@@ -178,6 +178,68 @@ export default function DashboardPage() {
         </section>
 
         <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Recent activity</h2>
+            <Link href="/audit-log" className="text-xs text-brand-700 hover:underline">All activity →</Link>
+          </div>
+          <div className="rounded-lg border bg-white p-3 shadow-sm">
+            {auditQ.isLoading && <p className="text-xs text-slate-400">Loading activity…</p>}
+            {auditQ.error && <p className="text-xs text-rose-600">Failed to load: {(auditQ.error as Error).message}</p>}
+            {(auditQ.data ?? []).length === 0 && !auditQ.isLoading && (
+              <p className="text-xs text-slate-500">No recorded activity yet.</p>
+            )}
+            <ol className="space-y-2">
+              {(auditQ.data ?? []).slice(0, 6).map((e) => (
+                <li key={e.id} className="flex items-start gap-2 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                  <div className="mt-1">
+                    <StatusBadge status={e.action === 'CREATE' ? 'ISSUED' : e.action === 'SUBMIT' ? 'VALID' : e.action === 'CANCEL' ? 'CANCELLED' : 'DRAFT'} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs">
+                      <span className="font-semibold text-slate-700">{e.action}</span>
+                      <span className="ml-1 text-slate-500">{e.entity}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {e.user?.name ?? e.user?.email ?? 'system'} • {new Date(e.createdAt).toLocaleString('en-MY')}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+                <section>
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-700">Recent activity</h2>
+            <Link href="/audit-log" className="text-xs text-brand-700 hover:underline">All activity →</Link>
+          </div>
+          <div className="rounded-lg border bg-white p-3 shadow-sm">
+            {auditQ.isLoading && <p className="text-xs text-slate-400">Loading activity…</p>}
+            {auditQ.error && <p className="text-xs text-rose-600">Failed to load: {(auditQ.error as Error).message}</p>}
+            {(auditQ.data ?? []).length === 0 && !auditQ.isLoading && (
+              <p className="text-xs text-slate-500">No recorded activity yet.</p>
+            )}
+            <ol className="space-y-2">
+              {(auditQ.data ?? []).slice(0, 6).map((e) => (
+                <li key={e.id} className="flex items-start gap-2 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                  <div className="mt-1">
+                    <StatusBadge status={e.action === 'CREATE' ? 'ISSUED' : e.action === 'SUBMIT' ? 'VALID' : e.action === 'CANCEL' ? 'CANCELLED' : 'DRAFT'} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs">
+                      <span className="font-semibold text-slate-700">{e.action}</span>
+                      <span className="ml-1 text-slate-500">{e.entity}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {e.user?.name ?? e.user?.email ?? 'system'} • {new Date(e.createdAt).toLocaleString('en-MY')}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+                <section>
           <h2 className="mb-2 text-sm font-semibold text-slate-700">e-Invoice status</h2>
           <div className="grid grid-cols-2 gap-3">
             <Card title="Pending" value={String(d.einvoicePending ?? 0)} accent="warn" hint="Awaiting MyInvois validation" />

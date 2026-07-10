@@ -69,15 +69,13 @@ describe('Live e-invoice UBL validation (e2e)', () => {
     // Find an existing invoice first
     const invoices = await http('/api/ar/invoices', { token });
     expect(invoices.status).toBe(200);
-    const list: Array<{ id: string }> = (
-      Array.isArray(invoices.body)
-        ? invoices.body
-        : Array.isArray(invoices.body?.data)
-          ? invoices.body.data
-          : Array.isArray(invoices.body?.data?.data)
-            ? invoices.body.data.data
-            : []
-    );
+    const list: Array<{ id: string }> = (() => {
+      const b = invoices.body;
+      if (Array.isArray(b)) return b;
+      if (Array.isArray(b?.data)) return b.data;
+      if (Array.isArray(b?.data?.data)) return b.data.data;
+      return [];
+    })();
     if (list.length === 0) {
       // nothing to test against — skip.
       console.warn('No invoices found, skipping UBL validator e2e test.');
@@ -107,15 +105,13 @@ describe('Live e-invoice UBL validation (e2e)', () => {
 
   it('submit-invoice with validateOnly returns without contacting MyInvois', async () => {
     const invoices = await http('/api/ar/invoices', { token });
-    const list: Array<{ id: string }> = (
-      Array.isArray(invoices.body)
-        ? invoices.body
-        : Array.isArray(invoices.body?.data)
-          ? invoices.body.data
-          : Array.isArray(invoices.body?.data?.data)
-            ? invoices.body.data.data
-            : []
-    );
+    const list: Array<{ id: string }> = (() => {
+      const b = invoices.body;
+      if (Array.isArray(b)) return b;
+      if (Array.isArray(b?.data)) return b.data;
+      if (Array.isArray(b?.data?.data)) return b.data.data;
+      return [];
+    })();
     if (list.length === 0) {
       console.warn('No invoices found, skipping submit.validateOnly e2e test.');
       return;

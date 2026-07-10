@@ -12,8 +12,10 @@ const fmt = (n: number | undefined) =>
 
 export default function BankReconciliationPage() {
   const banks = useQuery({ queryKey: ["bankAccounts"], queryFn: () => api.bankAccounts() });
+  const sp = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const presetId = sp?.get("bankAccountId") ?? null;
   const first = banks.data?.[0];
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(presetId);
   const bankId = selectedId ?? first?.id ?? null;
 
   const rec = useQuery({

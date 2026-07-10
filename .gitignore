@@ -30,3 +30,18 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local temporary files (audit/debug)
+apps/api/.unit.txt
+apps/api/.e2e-out.txt
+apps/api/.env-test.txt
+apps/api/.run-matrix.cmd
+/.val.txt
+/.smoke.txt
+/.dump-ar.txt
+/.dumpar.txt
+/.test-validate.*
+/.check-routes.ps1
+/.login.json
+/.token.txt
+/.invs.json

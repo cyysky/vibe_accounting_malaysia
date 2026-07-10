@@ -49,6 +49,13 @@ export default function DashboardPage() {
     queryFn: () => api.dashboard(),
   });
   const auditQ = useQuery({ queryKey: ["audit-dashboard"], queryFn: () => api.auditLog(15) });
+  const cashQ = useQuery({
+    queryKey: ["dashboard-cash-flow"],
+    queryFn: () => api.cashFlow({}),
+  });
+  const cash = cashQ.data as
+    | { operating: number; investing: number; financing: number; net: number }
+    | undefined;
 
   if (isLoading) return <p className="p-8 text-slate-500">Loading dashboard…</p>;
   if (error) return <p className="p-8 text-red-600">Failed to load: {(error as Error).message}</p>;
@@ -250,6 +257,19 @@ export default function DashboardPage() {
               <Activity className="h-4 w-4" /> View recent activity
             </Link>
           </div>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-sm font-semibold text-slate-700">Cash flow (period to date)</h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Card title="Operating" value={fmt(cash?.operating ?? 0)} accent={(cash?.operating ?? 0) >= 0 ? 'good' : 'bad'} hint="Revenue - Expenses" />
+            <Card title="Investing" value={fmt(cash?.investing ?? 0)} accent={(cash?.investing ?? 0) >= 0 ? 'good' : 'bad'} hint="Asset movements" />
+            <Card title="Financing" value={fmt(cash?.financing ?? 0)} accent={(cash?.financing ?? 0) >= 0 ? 'good' : 'bad'} hint="Liability / equity" />
+            <Card title="Net cash flow" value={fmt(cash?.net ?? 0)} accent={(cash?.net ?? 0) >= 0 ? 'good' : 'warn'} hint="Operating + investing + financing" />
+          </div>
+          {cashQ.error && (
+            <p className="mt-2 text-xs text-rose-600">Failed to load cash flow: {(cashQ.error as Error).message}</p>
+          )}
         </section>
       </div>
     </div>

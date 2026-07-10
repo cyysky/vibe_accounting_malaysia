@@ -25,6 +25,16 @@ export class ReportsController {
     return this.svc.balanceSheet(user.accountBookId);
   }
 
+  @Get('cash-flow')
+  cashFlow(
+    @CurrentUser() user: AuthUser,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    if (!user.accountBookId) throw new Error("User has no account book");
+    return this.svc.cashFlow(user.accountBookId, from, to);
+  }
+
   @Get('executive-summary')
   executiveSummary(@CurrentUser() user: AuthUser) {
     if (!user.accountBookId) throw new Error("User has no account book");

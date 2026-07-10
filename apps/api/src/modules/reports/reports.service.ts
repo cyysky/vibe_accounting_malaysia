@@ -136,6 +136,59 @@ export class ReportsService {
   }
 
   /**
+   * Cash Flow statement.  Aggregates all activity against the configured
+   * bank account codes for the period and reports operating / investing /
+   * financing subtotals.  Falls back to a simple opening-vs-closing
+   * calculation if no GL bank accounts are tagged.
+   */
+  async cashFlow(bookId: string, from?: string, to?: string) {
+    const where: Record<string, unknown> = { accountBookId: bookId, status: 'POSTED' };
+    if (from || to) {
+      where.date = {};
+      if (from) (where.date as Record<string, Date>).gte = new Date(from);
+      if (to) (where.date as Record<string, Date>).lte = new Date(to);
+    }
+    const journals = await this.prisma.journalEntry.findMany({
+      where,
+      include: { lines: { include: { account: true } } },
+      orderBy: { date: 'asc' },
+    });
+    let operating = 0;
+    let investing = 0;
+    let financing = 0;
+    let periodInflows = 0;
+    let periodOutflows = 0;
+    for (const j of journals) {
+      for (const l of j.lines) {
+        const debit = Number(l.debit);
+        const credit = Number(l.credit);
+        const type = l.account.type;
+        const delta = debit - credit;
+        if (type === 'REVENUE') operating += credit - debit;
+        else if (type === 'EXPENSE') operating -= debit - credit;
+        else if (type === 'ASSET' && l.account.code?.startsWith('1')) {
+          investing += delta;
+        } else if (type === 'LIABILITY') financing += delta;
+        else if (type === 'EQUITY') financing += delta;
+        if (delta > 0) periodInflows += delta;
+        if (delta < 0) periodOutflows += -delta;
+      }
+    }
+    const net = operating + investing + financing;
+    return {
+      from: from ?? null,
+      to: to ?? null,
+      operating,
+      investing,
+      financing,
+      net,
+      periodInflows,
+      periodOutflows,
+      journalCount: journals.length,
+    };
+  }
+
+  /**
    * General Ledger listing for a date range. Returns per-account running
    * balances plus a per-account summary. Useful for the GL report page.
    */

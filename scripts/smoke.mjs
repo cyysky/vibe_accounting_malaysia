@@ -591,6 +591,7 @@ async function main() {
   step('reports');
   await expect('GET /api/reports/pnl', () => req('GET', '/api/reports/pnl', token));
   await expect('GET /api/reports/balance-sheet', () => req('GET', '/api/reports/balance-sheet', token));
+  await expect('GET /api/reports/cash-flow', () => req('GET', '/api/reports/cash-flow', token));
 
   step('items');
   const items = await expect('GET /api/stock/items', () => req('GET', '/api/stock/items', token));

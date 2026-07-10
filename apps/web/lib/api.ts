@@ -561,6 +561,22 @@ class ApiClient {
   balanceSheet(): Promise<{ assets: number; liabilities: number; equity: number; balanced: boolean }> {
     return this.request('GET', '/reports/balance-sheet');
   }
+  cashFlow(opts: { from?: string; to?: string } = {}): Promise<{
+    from: string | null;
+    to: string | null;
+    operating: number;
+    investing: number;
+    financing: number;
+    net: number;
+    periodInflows: number;
+    periodOutflows: number;
+    journalCount: number;
+  }> {
+    const q: Record<string, string | undefined> = {};
+    if (opts.from) q.from = opts.from;
+    if (opts.to) q.to = opts.to;
+    return this.request('GET', '/reports/cash-flow', undefined, q);
+  }
 
   executiveSummary(): Promise<DashboardSummary & { pnl: unknown; bs: unknown }> {
     return this.request('GET', '/reports/executive-summary');

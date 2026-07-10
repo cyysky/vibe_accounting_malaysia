@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity } from "lucide-react";
+import { Activity, Download } from "lucide-react";
 import { api } from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatusBadge } from "../../components/ui/StatusBadge";
@@ -30,11 +30,16 @@ export default function AuditLogPage() {
         description="Audit trail of every change in the system."
         breadcrumbs={[{ label: "Activity" }]}
         actions={
-          <select className="rounded-md border px-3 py-2 text-sm" value={entity} onChange={(e) => setEntity(e.target.value)}>
-            {ENTITIES.map((e) => (
-              <option key={e} value={e}>{e || "All entities"}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <select className="rounded-md border px-3 py-2 text-sm" value={entity} onChange={(e) => setEntity(e.target.value)}>
+              {ENTITIES.map((e) => (
+                <option key={e} value={e}>{e || "All entities"}</option>
+              ))}
+            </select>
+            <a className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-2 text-sm hover:bg-slate-50" href={`/api/audit-log/export.csv${entity ? `?entity=${encodeURIComponent(entity)}` : ''}`}>
+              <Download className="h-3.5 w-3.5" /> Export CSV
+            </a>
+          </div>
         }
       />
       {q.isLoading ? (

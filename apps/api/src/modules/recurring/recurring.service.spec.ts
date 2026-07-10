@@ -48,4 +48,38 @@ describe("RecurringService", () => {
     const svc = new RecurringService(prisma, makeAr());
     await expect(svc.get("x")).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  describe('previewDue', () => {
+    it('returns the next N dates for a MONTHLY template starting from nextRunDate', async () => {
+      const prisma = makePrisma();
+      prisma.recurringInvoice.findUnique.mockResolvedValue({
+        id: 't1',
+        accountBookId: 'B1',
+        name: 'Monthly retainer',
+        frequency: 'MONTHLY',
+        nextRunDate: new Date('2026-07-15'),
+        endDate: null,
+        active: true,
+      });
+      const svc = new RecurringService(prisma, makeAr());
+      const result = await svc.previewDue('t1', 3);
+      expect(result.dates).toEqual(['2026-07-15', '2026-08-15', '2026-09-15']);
+    });
+
+    it('stops when past the endDate', async () => {
+      const prisma = makePrisma();
+      prisma.recurringInvoice.findUnique.mockResolvedValue({
+        id: 't1',
+        accountBookId: 'B1',
+        name: 'Limited',
+        frequency: 'MONTHLY',
+        nextRunDate: new Date('2026-07-15'),
+        endDate: new Date('2026-09-30'),
+        active: true,
+      });
+      const svc = new RecurringService(prisma, makeAr());
+      const result = await svc.previewDue('t1', 5);
+      expect(result.dates).toEqual(['2026-07-15', '2026-08-15', '2026-09-15']);
+    });
+  });
 });

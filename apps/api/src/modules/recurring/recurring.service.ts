@@ -128,6 +128,26 @@ export class RecurringService {
 
   /**
    * Process every template whose nextRunDate <= today.
+
+  /**
+   * Preview the next `count` invoice dates that this template will be
+   * generated for, starting from `from` (defaults to today).  Pure
+   * date computation, no DB writes.
+   */
+  async previewDue(id: string, count = 5, from?: Date) {
+    const tpl = await this.get(id);
+    const dates: string[] = [];
+    let cursor = from ?? new Date(tpl.nextRunDate);
+    for (let i = 0; i < count; i += 1) {
+      dates.push(cursor.toISOString().slice(0, 10));
+      cursor = advance(tpl.frequency, cursor);
+      if (tpl.endDate && cursor > tpl.endDate) break;
+    }
+    return { id: tpl.id, name: tpl.name, frequency: tpl.frequency, dates };
+  }
+
+  /**
+   * Process every template whose nextRunDate <= today.
    */
   async runDue(bookId: string) {
     const due = await this.prisma.recurringInvoice.findMany({

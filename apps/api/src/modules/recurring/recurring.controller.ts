@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { RecurringService } from "./recurring.service";
 import { CreateRecurringDto, UpdateRecurringDto } from "./dto/recurring.dto";
@@ -38,6 +38,11 @@ export class RecurringController {
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.svc.remove(id);
+  }
+
+  @Get(":id/preview")
+  preview(@Param("id") id: string, @Query("count") count?: string) {
+    return this.svc.previewDue(id, Math.max(1, Math.min(20, Number(count) || 5)));
   }
 
   @Post("run-due")

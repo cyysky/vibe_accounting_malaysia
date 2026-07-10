@@ -187,6 +187,20 @@ export default function RecurringPage() {
             key: "actions", header: "", align: "right",
             render: (r) => (
               <div className="flex items-center justify-end gap-1">
+                <button
+                  onClick={async () => {
+                    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                    const res = await fetch(`/api/recurring/${r.id}/preview?count=5`, {
+                      headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    });
+                    const body = await res.json();
+                    const dates = (body?.data?.dates ?? []).join('\n');
+                    alert(`Next due dates:\n${dates || 'no upcoming dates'}`);
+                  }}
+                  className="rounded px-2 py-1 text-xs text-sky-700 hover:bg-sky-50"
+                >
+                  Preview
+                </button>
                 <button onClick={() => runOne.mutate(r.id)} className="rounded px-2 py-1 text-xs text-brand-700 hover:bg-brand-50" disabled={runOne.isPending}>
                   Run
                 </button>

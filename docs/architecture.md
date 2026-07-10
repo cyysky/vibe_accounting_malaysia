@@ -22,7 +22,7 @@ service, and (optionally) a persistence model.
 
 | Module            | Path                              | Responsibility                                                  |
 | ----------------- | --------------------------------- | -------------------------------------------------------------- |
-| `auth`            | `modules/auth`                    | JWT login, bcrypt, refresh tokens, profile                     |
+| `auth`            | `modules/auth`                    | JWT login, bcrypt, refresh tokens, profile, user admin         |
 | `account-books`   | `modules/account-books`           | Multi-company support                                          |
 | `gl`              | `modules/gl`                      | Chart of accounts, journals, tax codes, fiscal years, posting  |
 | `ar`              | `modules/ar`                      | Customers, customer invoices (with auto-GL post)               |
@@ -31,14 +31,14 @@ service, and (optionally) a persistence model.
 | `purchase`        | `modules/purchase`                | Purchase orders                                                 |
 | `stock`           | `modules/stock`                   | Items + stock movements + low-stock alerts                     |
 | `dashboard`       | `modules/dashboard`              | KPI summary + quick actions                                     |
-| `reports`         | `modules/reports`                 | P&L, balance sheet, AR/AP aging, general ledger                |
+| `reports`         | `modules/reports`                 | P&L, balance sheet, AR/AP aging, general ledger, bank recon    |
 | `einvoice`        | `modules/einvoice`                | MyInvois / LHDNM e-invoice submission + lifecycle              |
 | `payments`        | `modules/payments`                | Customer & supplier payments (with auto-GL post)              |
 | `credit-notes`    | `modules/credit-notes`            | Refund / sales return documents                                |
 | `debit-notes`     | `modules/debit-notes`             | Additional supplier charges                                    |
-| `bank-accounts`   | `modules/bank-accounts`           | Cash / bank accounts linked to GL                              |
+| `bank-accounts`   | `modules/bank-accounts`           | Cash / bank accounts linked to GL + reconciliation             |
 | `recurring`       | `modules/recurring`               | Recurring invoice templates (weekly/monthly/quarterly/yearly) |
-| `audit-log`       | `modules/audit-log`               | Global entity-level audit trail                                |
+| `audit-log`       | `modules/audit-log`               | Global entity-level audit trail + global write interceptor     |
 | `health`          | `modules/health`                  | Container / app liveness                                       |
 
 ## Posting to GL
@@ -61,6 +61,24 @@ fiscal year.
 Sales Returns is typically account `4100`; the system falls back to
 `4000` (Sales) if `4100` is not present.
 
+## Document number generation
+
+Document numbers (`INV-00001`, `CN-00001`, `RCP-00001`, `SINV-00001`,
+`JV-0001`, …) are allocated by `DocumentSequenceService` which uses a
+`document_sequence` table with a single row per `(bookId, prefix)`
+pair.  Each allocation runs inside a Postgres transaction that:
+
+1. Acquires a `pg_advisory_xact_lock(bigint)` keyed on a stable FNV-1a
+   hash of `(bookId, prefix)` so concurrent writers queue rather than
+   race.
+2. Upserts the counter row and increments `nextValue` in a single
+   `UPDATE … RETURNING` so duplicates are impossible.
+3. On first use of a prefix, the counter is seeded from `MAX(number)`
+   across the known document tables (so the system can be rolled out
+   on a populated database without renumbering).
+
+The lock is released automatically when the transaction commits.
+
 ## Cross-module wiring
 
 - `RecurringModule` imports `ArModule` and calls `ArService.createInvoice`
@@ -69,27 +87,38 @@ Sales Returns is typically account `4100`; the system falls back to
   trigger automatic GL posting via `PostingService`.
 - `AuditLogModule` is declared global so any service can inject
   `AuditLogService` (fire-and-forget audit logging that never throws).
-- `BankAccountsModule` is independent; its `glAccountCode` references a
-  row in the `Account` chart-of-accounts so that payments can resolve
-  the correct bank GL account at posting time.
+  The `AuditInterceptor` is registered via `APP_INTERCEPTOR` so every
+  successful `POST/PUT/PATCH/DELETE` controller call is recorded
+  automatically, even when the underlying service never explicitly
+  calls `AuditLogService.record`.
+- `BankAccountsModule` exposes `GET /bank-accounts/:id/reconciliation`
+  which returns the opening balance, the running GL balance for the
+  linked account, the user-supplied statement balance, and the
+  difference between them.
 - `EinvoiceModule` pulls supplier MSIC + address from the
   `AccountBook` (industryCode), producing a fully-populated UBL 2.1
-  document.
+  document that includes the MyInvois `TaxTypeCode` on every line
+  (`01`–`06` or `E`).
 
 ## Database
 
 The Prisma schema models the entire accounting domain.  Most entities
 are scoped to an `AccountBook` for multi-tenancy.  All Decimal columns
 use `@db.Decimal(18, 2)` (or `(18, 4)` for quantity/uom) to avoid
-floating-point drift.
+floating-point drift.  PascalCase identifiers are preserved in the
+Postgres schema, so raw SQL must double-quote column names
+(`"accountBookId"`, `"nextValue"`) to avoid the lowercasing that
+otherwise kicks in for unquoted identifiers.
 
 Key models:
 
 - `AccountBook` (company), `User` (with `Role` enum)
-- `Account`, `TaxCode`, `FiscalYear`, `JournalEntry`, `JournalLine`
+- `Account`, `TaxCode` (with `taxTypeCode` MyInvois field), `FiscalYear`,
+  `JournalEntry`, `JournalLine`
+- `DocumentSequence` — race-safe counter rows
 - `Customer`, `Supplier`, `Item`, `CustomerInvoice`, `CustomerInvoiceLine`,
   `SupplierInvoice`, `SupplierInvoiceLine`
-- `SalesOrder`, `PurchaseOrder`
+- `SalesOrder`, `SalesOrderLine`, `PurchaseOrder`, `PurchaseOrderLine`
 - `CustomerPayment`, `CustomerPaymentApplication`,
   `SupplierPayment`, `SupplierPaymentApplication`
 - `CreditNote`, `CreditNoteLine`, `DebitNote`, `DebitNoteLine`
@@ -113,9 +142,17 @@ nginx is the only published port.
 ## Audit log
 
 `AuditLogService` records `CREATE / UPDATE / DELETE / POST / SUBMIT /
-CANCEL / POLL / PAY` events.  Records are written best-effort so a
-database failure never breaks the originating transaction.  The web
-side exposes them under **Activity** in the sidebar.
+CANCEL / POLL / PAY` events.  Two ways an audit row is created:
+
+1. **Explicit** — services call `AuditLogService.record({...})` for
+   high-value events (payments posted, e-invoice submitted, etc.).
+2. **Implicit** — the global `AuditInterceptor` runs after every
+   successful `POST/PUT/PATCH/DELETE` controller invocation and
+   auto-logs the action with the entity inferred from the URL path.
+
+Records are written best-effort so a database failure never breaks the
+originating transaction.  The web side exposes them under
+**Activity** in the sidebar.
 
 ## Recurring invoices
 

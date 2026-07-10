@@ -109,6 +109,8 @@ model TaxCode {
   debitNoteLines       DebitNoteLine[]        @relation("TaxCodeOnDebitNoteLine")
   recurringLines       RecurringInvoiceLine[] @relation("TaxCodeOnRecurringLine")
   supplierInvoiceLines SupplierInvoiceLine[]  @relation("TaxCodeOnSupplierLine")
+  salesOrderLines      SalesOrderLine[]       @relation("TaxCodeOnSalesOrderLine")
+  purchaseOrderLines   PurchaseOrderLine[]    @relation("TaxCodeOnPurchaseOrderLine")
   id                   String                 @id @default(uuid())
   accountBookId        String
   accountBook          AccountBook            @relation(fields: [accountBookId], references: [id], onDelete: Cascade)
@@ -385,6 +387,8 @@ model Item {
   debitNoteLines       DebitNoteLine[]        @relation("DebitNoteLineItem")
   recurringLines       RecurringInvoiceLine[] @relation("RecurringLineItem")
   stockMovements       StockMovement[]
+  salesOrderLines      SalesOrderLine[]       @relation("SalesOrderLineItem")
+  purchaseOrderLines   PurchaseOrderLine[]    @relation("PurchaseOrderLineItem")
 
   @@unique([accountBookId, code])
   @@index([accountBookId, name])
@@ -405,14 +409,35 @@ model SalesOrder {
   customer      Customer         @relation(fields: [customerId], references: [id])
   number        String
   date          DateTime         @db.Date
+  subtotal      Decimal          @default(0) @db.Decimal(18, 2)
+  taxTotal      Decimal          @default(0) @db.Decimal(18, 2)
   total         Decimal          @default(0) @db.Decimal(18, 2)
   status        SalesOrderStatus @default(OPEN)
   notes         String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+  lines         SalesOrderLine[]
 
   @@unique([accountBookId, number])
   @@index([accountBookId, customerId])
+}
+
+model SalesOrderLine {
+  id          String     @id @default(uuid())
+  orderId     String
+  order       SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?      @relation("SalesOrderLineItem", fields: [itemId], references: [id])
+  description String
+  quantity    Decimal    @db.Decimal(18, 4)
+  unitPrice   Decimal    @db.Decimal(18, 4)
+  discount    Decimal    @default(0) @db.Decimal(18, 2)
+  taxCodeId   String?
+  taxCode     TaxCode?   @relation("TaxCodeOnSalesOrderLine", fields: [taxCodeId], references: [id])
+  taxAmount   Decimal    @default(0) @db.Decimal(18, 2)
+  subtotal    Decimal    @db.Decimal(18, 2)
+  total       Decimal    @db.Decimal(18, 2)
+  lineNo      Int
 }
 
 // --- Purchase orders ---
@@ -430,14 +455,35 @@ model PurchaseOrder {
   supplier      Supplier            @relation(fields: [supplierId], references: [id])
   number        String
   date          DateTime            @db.Date
+  subtotal      Decimal             @default(0) @db.Decimal(18, 2)
+  taxTotal      Decimal             @default(0) @db.Decimal(18, 2)
   total         Decimal             @default(0) @db.Decimal(18, 2)
   status        PurchaseOrderStatus @default(OPEN)
   notes         String?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
+  lines         PurchaseOrderLine[]
 
   @@unique([accountBookId, number])
   @@index([accountBookId, supplierId])
+}
+
+model PurchaseOrderLine {
+  id          String        @id @default(uuid())
+  orderId     String
+  order       PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId      String?
+  item        Item?         @relation("PurchaseOrderLineItem", fields: [itemId], references: [id])
+  description String
+  quantity    Decimal       @db.Decimal(18, 4)
+  unitPrice   Decimal       @db.Decimal(18, 4)
+  discount    Decimal       @default(0) @db.Decimal(18, 2)
+  taxCodeId   String?
+  taxCode     TaxCode?      @relation("TaxCodeOnPurchaseOrderLine", fields: [taxCodeId], references: [id])
+  taxAmount   Decimal       @default(0) @db.Decimal(18, 2)
+  subtotal    Decimal       @db.Decimal(18, 2)
+  total       Decimal       @db.Decimal(18, 2)
+  lineNo      Int
 }
 
 // --- Customer payments (receipts) ---

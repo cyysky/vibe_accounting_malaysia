@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -15,5 +15,11 @@ export class DashboardController {
   @Get('summary')
   summary(@CurrentUser() user: AuthUser) {
     return this.svc.summary(user.accountBookId);
+  }
+
+  @Get('search')
+  search(@CurrentUser() user: AuthUser, @Query('q') q: string) {
+    if (!user.accountBookId) throw new Error('User has no account book');
+    return this.svc.search(user.accountBookId, q ?? '');
   }
 }

@@ -117,4 +117,52 @@ export class DashboardService {
       einvoiceValid,
     };
   }
+
+  /**
+   * Cross-entity search by a case-insensitive substring.  Returns the
+   * first matches in customers, suppliers, items, customer invoices,
+   * supplier invoices and journal entries so the global search box can
+   * show live results.
+   */
+  async search(bookId: string, q: string, limit = 5) {
+    if (!q || q.length < 2) {
+      return { customers: [], suppliers: [], items: [], invoices: [], bills: [], journals: [] };
+    }
+    const contains = { contains: q, mode: 'insensitive' as const };
+    const [customers, suppliers, items, invoices, bills, journals] = await Promise.all([
+      this.prisma.customer.findMany({
+        where: { accountBookId: bookId, OR: [{ name: contains }, { code: contains }] },
+        take: limit,
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.supplier.findMany({
+        where: { accountBookId: bookId, OR: [{ name: contains }, { code: contains }] },
+        take: limit,
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.item.findMany({
+        where: { accountBookId: bookId, OR: [{ name: contains }, { code: contains }] },
+        take: limit,
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.customerInvoice.findMany({
+        where: { accountBookId: bookId, OR: [{ number: contains }, { notes: contains }] },
+        take: limit,
+        orderBy: { date: 'desc' },
+        include: { customer: { select: { id: true, name: true } } },
+      }),
+      this.prisma.supplierInvoice.findMany({
+        where: { accountBookId: bookId, OR: [{ number: contains }, { notes: contains }] },
+        take: limit,
+        orderBy: { date: 'desc' },
+        include: { supplier: { select: { id: true, name: true } } },
+      }),
+      this.prisma.journalEntry.findMany({
+        where: { accountBookId: bookId, OR: [{ number: contains }, { description: contains }] },
+        take: limit,
+        orderBy: { date: 'desc' },
+      }),
+    ]);
+    return { customers, suppliers, items, invoices, bills, journals };
+  }
 }

@@ -105,5 +105,34 @@ describe('Extra endpoints (e2e over HTTP)', () => {
   it('rejects unauthenticated access to /api/reports/cash-flow', async () => {
     const r = await http('/api/reports/cash-flow');
     expect(r.status).toBe(401);
+  });  it('GET /api/dashboard/search returns hits when the book has customers/items', async () => {
+    const r = await http('/api/dashboard/search?q=Acme', { token });
+    expect(r.status).toBe(200);
+    const d = data<{
+      customers: unknown[]; suppliers: unknown[]; items: unknown[];
+      invoices: unknown[]; bills: unknown[]; journals: unknown[];
+    }>(r.body, {
+      customers: [], suppliers: [], items: [], invoices: [], bills: [], journals: [],
+    });
+    expect(d).toHaveProperty('customers');
+    expect(d).toHaveProperty('suppliers');
+    expect(d).toHaveProperty('items');
+    expect(d).toHaveProperty('invoices');
+    expect(d).toHaveProperty('bills');
+    expect(d).toHaveProperty('journals');
   });
+
+  it('rejects too-short queries with empty buckets', async () => {
+    const r = await http('/api/dashboard/search?q=a', { token });
+    expect(r.status).toBe(200);
+    const d = data<{ customers: unknown[] }>(r.body, { customers: [] });
+    expect(Array.isArray(d.customers)).toBe(true);
+    expect(d.customers).toHaveLength(0);
+  });
+
+  it('returns 401 for unauthenticated search', async () => {
+    const r = await http('/api/dashboard/search?q=acme');
+    expect(r.status).toBe(401);
+  });
+
 });

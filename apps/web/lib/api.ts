@@ -553,6 +553,16 @@ class ApiClient {
   dashboard(): Promise<DashboardSummary> {
     return this.request<DashboardSummary>('GET', '/dashboard/summary');
   }
+  dashboardSearch(q: string): Promise<{
+    customers: Array<{ id: string; name: string; code: string }>;
+    suppliers: Array<{ id: string; name: string; code: string }>;
+    items: Array<{ id: string; name: string; code: string }>;
+    invoices: Array<{ id: string; number: string; customer: { name: string } }>;
+    bills: Array<{ id: string; number: string; supplier: { name: string } }>;
+    journals: Array<{ id: string; number: string; description?: string | null }>;
+  }> {
+    return this.request('GET', '/dashboard/search', undefined, { q });
+  }
 
   pnl(): Promise<{ revenue: number; expenses: number; netIncome: number }> {
     return this.request('GET', '/reports/pnl');

@@ -9,6 +9,7 @@ export class CreateAccountDto {
   @ApiPropertyOptional() @IsOptional() @IsString() parentId?: string;
   @ApiPropertyOptional({ default: 'MYR' }) @IsOptional() @IsString() currency?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() taxCodeId?: string;
+  @ApiPropertyOptional({ default: true }) @IsOptional() @IsBoolean() active?: boolean;
 }
 
 export class UpdateAccountDto {

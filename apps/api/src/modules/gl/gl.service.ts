@@ -1,54 +1,53 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../../database/prisma.service';
-import { DocumentSequenceService } from '../../database/document-sequence.service';
-import { CreateAccountDto, UpdateAccountDto } from './dto/account.dto';
-import { CreateJournalDto } from './dto/journal.dto';
-import { CreateTaxCodeDto, UpdateTaxCodeDto } from './dto/tax-code.dto';
-import { CreateFiscalYearDto, UpdateFiscalYearDto } from './dto/fiscal-year.dto';
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma, type Account, type AccountType, type JournalStatus } from "@prisma/client";
+import { PrismaService } from "../../database/prisma.service";
+import { DocumentSequenceService } from "../../database/document-sequence.service";
+import { CreateAccountDto } from "./dto/account.dto";
+import { UpdateAccountDto } from "./dto/account.dto";
+import { CreateJournalDto } from "./dto/journal.dto";
+import { CreateTaxCodeDto } from "./dto/tax-code.dto";
+import { UpdateTaxCodeDto } from "./dto/tax-code.dto";
 
 @Injectable()
 export class GlService {
-  constructor(private readonly prisma: PrismaService, private readonly seq: DocumentSequenceService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly seq: DocumentSequenceService,
+  ) {}
 
-  // --- Chart of accounts ---------------------------------------------------
-  listAccounts(bookId?: string): Promise<Array<Record<string, unknown>>> {
+  // --- Chart of accounts ----------------------------------------------------
+  listAccounts(bookId: string, includeInactive = false): Promise<Array<Record<string, unknown>>> {
     return this.prisma.account.findMany({
-      where: bookId ? { accountBookId: bookId } : {},
-      orderBy: { code: 'asc' },
+      where: { accountBookId: bookId, ...(includeInactive ? {} : { active: true }) },
+      orderBy: { code: "asc" },
     }) as unknown as Promise<Array<Record<string, unknown>>>;
   }
 
-  async getAccount(id: string): Promise<Record<string, unknown>> {
+  async getAccount(id: string): Promise<Account> {
     const a = await this.prisma.account.findUnique({ where: { id } });
     if (!a) throw new NotFoundException(`Account ${id} not found`);
-    return a as unknown as Record<string, unknown>;
+    return a;
   }
 
   async createAccount(bookId: string, dto: CreateAccountDto): Promise<Record<string, unknown>> {
-    const existing = await this.prisma.account.findUnique({
-      where: { accountBookId_code: { accountBookId: bookId, code: dto.code } },
-    });
-    if (existing) throw new BadRequestException(`Account code ${dto.code} already exists`);
     return (await this.prisma.account.create({
       data: {
         accountBookId: bookId,
         code: dto.code,
         name: dto.name,
-        type: dto.type,
-        parentId: dto.parentId,
-        currency: dto.currency ?? 'MYR',
-        taxCodeId: dto.taxCodeId,
+        type: dto.type as AccountType,
+        parentId: dto.parentId ?? null,
+        currency: dto.currency ?? "MYR",
+        taxCodeId: dto.taxCodeId ?? null,
+        active: dto.active ?? true,
       },
     })) as unknown as Record<string, unknown>;
   }
 
   async updateAccount(id: string, dto: UpdateAccountDto): Promise<Record<string, unknown>> {
     await this.ensureAccount(id);
-    return (await this.prisma.account.update({
-      where: { id },
-      data: dto,
-    })) as unknown as Record<string, unknown>;
+    const data: Record<string, unknown> = { ...dto };
+    return (await this.prisma.account.update({ where: { id }, data })) as unknown as Record<string, unknown>;
   }
 
   async deleteAccount(id: string): Promise<void> {
@@ -62,25 +61,35 @@ export class GlService {
   }
 
   // --- Journal entries -----------------------------------------------------
-  async listJournals(bookId: string, page = 1, pageSize = 50): Promise<{
+  /**
+   * Returns the most recent journal entries first (createdAt desc with
+   * date desc as a tie-breaker). This matches user expectations and
+   * keeps recent activity on the first page.
+   */
+  async listJournals(
+    bookId: string,
+    page = 1,
+    pageSize = 50,
+  ): Promise<{
     data: Array<Record<string, unknown>>;
     total: number;
     page: number;
     pageSize: number;
   }> {
-    const skip = (Math.max(1, page) - 1) * Math.min(200, Math.max(1, pageSize));
-    const take = Math.min(200, Math.max(1, pageSize));
+    const safePage = Math.max(1, page);
+    const safeSize = Math.min(200, Math.max(1, pageSize));
+    const skip = (safePage - 1) * safeSize;
     const [data, total] = await Promise.all([
       this.prisma.journalEntry.findMany({
         where: { accountBookId: bookId },
         include: { lines: { include: { account: true } } },
-        orderBy: { date: 'desc' },
+        orderBy: [{ createdAt: "desc" }, { date: "desc" }, { number: "desc" }],
         skip,
-        take,
+        take: safeSize,
       }),
       this.prisma.journalEntry.count({ where: { accountBookId: bookId } }),
     ]);
-    return { data: data as unknown as Array<Record<string, unknown>>, total, page, pageSize };
+    return { data: data as unknown as Array<Record<string, unknown>>, total, page: safePage, pageSize: safeSize };
   }
 
   async createJournal(bookId: string, dto: CreateJournalDto): Promise<Record<string, unknown>> {
@@ -89,165 +98,180 @@ export class GlService {
     if (Math.abs(totalDebit - totalCredit) > 0.001) {
       throw new BadRequestException(`Journal does not balance: debit ${totalDebit} vs credit ${totalCredit}`);
     }
-    // Account IDs must belong to this book
-    const accountIds = dto.lines.map((l) => l.accountId);
-    const accounts = await this.prisma.account.findMany({
-      where: { id: { in: accountIds }, accountBookId: bookId },
+    if (dto.lines.length < 2) {
+      throw new BadRequestException('Journal needs at least 2 lines');
+    }
+    // Resolve the fiscal year for the entry date and ensure it isn't closed.
+    const fy = await this.prisma.fiscalYear.findFirst({
+      where: { accountBookId: bookId, startDate: { lte: new Date(dto.date) }, endDate: { gte: new Date(dto.date) } },
     });
-    if (accounts.length !== accountIds.length) {
-      throw new BadRequestException('One or more account ids do not belong to this account book');
+    if (!fy) {
+      throw new BadRequestException(`No fiscal year configured for date ${dto.date}`);
     }
-    // Determine fiscal year for the journal date
-    const journalDate = new Date(dto.date);
-    const fiscalYear = await this.prisma.fiscalYear.findFirst({
-      where: {
-        accountBookId: bookId,
-        startDate: { lte: journalDate },
-        endDate: { gte: journalDate },
-      },
-    });
-    if (!fiscalYear) {
-      throw new BadRequestException(
-        `No fiscal year configured for date ${dto.date}. Create one via POST /gl/fiscal-years.`,
-      );
+    if (fy.closed) {
+      throw new BadRequestException(`Fiscal year ${fy.year} is closed`);
     }
-    if (fiscalYear.closed) {
-      throw new BadRequestException(`Fiscal year ${fiscalYear.year} is closed`);
-    }
-    // Number auto-generated: JV-####
     const number = await this.seq.next(bookId, "JV", 4);
-    const created = await this.prisma.journalEntry.create({
+    return (await this.prisma.journalEntry.create({
       data: {
         accountBookId: bookId,
         number,
-        fiscalYearId: fiscalYear.id,
-        date: journalDate,
+        fiscalYearId: fy.id,
+        date: new Date(dto.date),
         description: dto.description,
-        reference: dto.reference,
-        status: dto.status ?? 'POSTED',
-        totalDebit,
-        totalCredit,
+        reference: dto.reference ?? null,
+        status: (dto.status as JournalStatus) ?? "POSTED",
+        totalDebit: new Prisma.Decimal(totalDebit),
+        totalCredit: new Prisma.Decimal(totalCredit),
         lines: {
           create: dto.lines.map((l) => ({
             accountId: l.accountId,
-            description: l.description,
-            debit: l.debit,
-            credit: l.credit,
+            description: l.description ?? null,
+            debit: new Prisma.Decimal(l.debit ?? 0),
+            credit: new Prisma.Decimal(l.credit ?? 0),
           })),
         },
       },
       include: { lines: { include: { account: true } } },
-    });
-    return created as unknown as Record<string, unknown>;
+    })) as unknown as Record<string, unknown>;
   }
 
-  // --- Trial balance -------------------------------------------------------
-  async trialBalance(bookId: string): Promise<Array<{ account: Record<string, unknown>; debit: number; credit: number }>> {
-    const accounts = await this.prisma.account.findMany({
-      where: { accountBookId: bookId, active: true },
-      orderBy: { code: 'asc' },
+  async getJournal(id: string): Promise<Record<string, unknown>> {
+    const j = await this.prisma.journalEntry.findUnique({
+      where: { id },
+      include: { lines: { include: { account: true } } },
     });
-    const journals = await this.prisma.journalEntry.findMany({
-      where: { accountBookId: bookId, status: 'POSTED' },
-      include: { lines: true },
-    });
-    const map = new Map<string, { debit: number; credit: number }>();
-    for (const j of journals) {
-      for (const line of j.lines) {
-        const cur = map.get(line.accountId) ?? { debit: 0, credit: 0 };
-        cur.debit += Number(line.debit);
-        cur.credit += Number(line.credit);
-        map.set(line.accountId, cur);
-      }
-    }
-    return accounts
-      .map((a) => ({ account: a as unknown as Record<string, unknown>, ...(map.get(a.id) ?? { debit: 0, credit: 0 }) }))
-      .filter((r) => r.debit || r.credit);
+    if (!j) throw new NotFoundException(`Journal ${id} not found`);
+    return j as unknown as Record<string, unknown>;
   }
 
   // --- Tax codes -----------------------------------------------------------
   listTaxCodes(bookId: string): Promise<Array<Record<string, unknown>>> {
     return this.prisma.taxCode.findMany({
       where: { accountBookId: bookId },
-      orderBy: { code: 'asc' },
+      orderBy: { code: "asc" },
     }) as unknown as Promise<Array<Record<string, unknown>>>;
   }
 
   async createTaxCode(bookId: string, dto: CreateTaxCodeDto): Promise<Record<string, unknown>> {
-    const dup = await this.prisma.taxCode.findUnique({
+    const existing = await this.prisma.taxCode.findUnique({
       where: { accountBookId_code: { accountBookId: bookId, code: dto.code } },
     });
-    if (dup) throw new BadRequestException(`Tax code ${dto.code} already exists`);
+    if (existing) {
+      throw new BadRequestException(`Tax code ${dto.code} already exists in this account book`);
+    }
     return (await this.prisma.taxCode.create({
       data: {
         accountBookId: bookId,
         code: dto.code,
         name: dto.name,
         rate: new Prisma.Decimal(dto.rate),
-        description: dto.description,
+        taxTypeCode: dto.taxTypeCode ?? "01",
+        description: dto.description ?? null,
         active: dto.active ?? true,
       },
     })) as unknown as Record<string, unknown>;
   }
 
   async updateTaxCode(id: string, dto: UpdateTaxCodeDto): Promise<Record<string, unknown>> {
-    const tc = await this.prisma.taxCode.findUnique({ where: { id } });
-    if (!tc) throw new NotFoundException(`Tax code ${id} not found`);
     const data: Record<string, unknown> = { ...dto };
     if (dto.rate !== undefined) data.rate = new Prisma.Decimal(dto.rate);
     return (await this.prisma.taxCode.update({ where: { id }, data })) as unknown as Record<string, unknown>;
   }
 
   async deleteTaxCode(id: string): Promise<void> {
-    const tc = await this.prisma.taxCode.findUnique({ where: { id }, include: { customerInvoiceLines: true, supplierInvoiceLines: true } });
-    if (!tc) throw new NotFoundException(`Tax code ${id} not found`);
-    if (tc.customerInvoiceLines.length || tc.supplierInvoiceLines.length) {
-      throw new BadRequestException('Tax code is in use by invoice lines');
-    }
     await this.prisma.taxCode.delete({ where: { id } });
   }
 
   // --- Fiscal years --------------------------------------------------------
-  listFiscalYears(bookId: string): Promise<Array<Record<string, unknown>>> {
+  listFiscalYears(bookId: string) {
     return this.prisma.fiscalYear.findMany({
       where: { accountBookId: bookId },
-      orderBy: { year: 'desc' },
-    }) as unknown as Promise<Array<Record<string, unknown>>>;
+      orderBy: { year: "desc" },
+    });
   }
-
-  async createFiscalYear(bookId: string, dto: CreateFiscalYearDto): Promise<Record<string, unknown>> {
+  async createFiscalYear(
+    bookId: string,
+    dto: { year: number; startDate: string; endDate: string },
+  ): Promise<Record<string, unknown>> {
     const start = new Date(dto.startDate);
     const end = new Date(dto.endDate);
-    if (end <= start) {
-      throw new BadRequestException('endDate must be after startDate');
+    if (!(end.getTime() > start.getTime())) {
+      throw new BadRequestException(`endDate ${dto.endDate} must be after startDate ${dto.startDate}`);
     }
-    const dup = await this.prisma.fiscalYear.findUnique({
-      where: { accountBookId_year: { accountBookId: bookId, year: dto.year } },
-    });
-    if (dup) throw new BadRequestException(`Fiscal year ${dto.year} already exists`);
     return (await this.prisma.fiscalYear.create({
-      data: { accountBookId: bookId, year: dto.year, startDate: start, endDate: end },
+      data: {
+        accountBookId: bookId,
+        year: dto.year,
+        startDate: start,
+        endDate: end,
+        closed: false,
+      },
     })) as unknown as Record<string, unknown>;
   }
-
-  async updateFiscalYear(id: string, dto: UpdateFiscalYearDto): Promise<Record<string, unknown>> {
-    const fy = await this.prisma.fiscalYear.findUnique({ where: { id } });
-    if (!fy) throw new NotFoundException(`Fiscal year ${id} not found`);
-    if (fy.closed && dto.closed === false) {
-      // Allow re-opening only if no journals after current end date
-    }
+  async updateFiscalYear(
+    id: string,
+    dto: { year?: number; startDate?: string; endDate?: string; closed?: boolean },
+  ): Promise<Record<string, unknown>> {
     const data: Record<string, unknown> = { ...dto };
     if (dto.startDate) data.startDate = new Date(dto.startDate);
     if (dto.endDate) data.endDate = new Date(dto.endDate);
     return (await this.prisma.fiscalYear.update({ where: { id }, data })) as unknown as Record<string, unknown>;
   }
-
+  async closeFiscalYear(id: string): Promise<Record<string, unknown>> {
+    return (await this.prisma.fiscalYear.update({
+      where: { id },
+      data: { closed: true },
+    })) as unknown as Record<string, unknown>;
+  }
   async deleteFiscalYear(id: string): Promise<void> {
-    const fy = await this.prisma.fiscalYear.findUnique({ where: { id }, include: { journals: true } });
-    if (!fy) throw new NotFoundException(`Fiscal year ${id} not found`);
-    if (fy.journals.length) {
-      throw new BadRequestException('Cannot delete fiscal year with journals');
-    }
     await this.prisma.fiscalYear.delete({ where: { id } });
+  }
+
+  // --- Trial balance / GL rollup ------------------------------------------
+  /**
+   * Returns the running GL balance per account, ordered by account code.
+   * Used by the Balance Sheet, P&L and General Ledger reports.
+   */
+  async trialBalance(
+    bookId: string,
+    asOf?: Date,
+  ): Promise<Array<{ account: Account; debit: number; credit: number; balance: number }>> {
+    const where: Prisma.JournalLineWhereInput = {
+      journal: {
+        accountBookId: bookId,
+        status: "POSTED" as JournalStatus,
+        ...(asOf ? { date: { lte: asOf } } : {}),
+      },
+    };
+    const grouped = await this.prisma.journalLine.groupBy({
+      by: ["accountId"],
+      where,
+      _sum: { debit: true, credit: true },
+    });
+    const accounts = await this.prisma.account.findMany({ where: { accountBookId: bookId } });
+    const byId = new Map<string, Account>(accounts.map((a) => [a.id, a] as const));
+    const rows: Array<{ account: Account; debit: number; credit: number; balance: number }> = [];
+    for (const g of grouped) {
+      const account = byId.get(g.accountId);
+      if (!account) continue;
+      const debit = Number(g._sum.debit ?? 0);
+      const credit = Number(g._sum.credit ?? 0);
+      const balance = this.normalBalanceSide(account.type) === "debit" ? debit - credit : credit - debit;
+      rows.push({ account, debit, credit, balance });
+    }
+    return rows.sort((a, b) => a.account.code.localeCompare(b.account.code));
+  }
+
+  /** Alias for the trialBalance, used by older callers. */
+  accountBalances(
+    bookId: string,
+    asOf?: Date,
+  ): Promise<Array<{ account: Account; debit: number; credit: number; balance: number }>> {
+    return this.trialBalance(bookId, asOf);
+  }
+
+  private normalBalanceSide(type: AccountType): "debit" | "credit" {
+    return type === "ASSET" || type === "EXPENSE" ? "debit" : "credit";
   }
 }

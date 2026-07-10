@@ -32,10 +32,24 @@ export class DocumentSequenceService {
       ],
     },
     {
-      prefix: 'BIL',
+      prefix: 'SINV',
       sources: [
         { table: 'SupplierInvoice', column: 'number' },
         { table: 'PurchaseOrder', column: 'number' },
+      ],
+    },
+    {
+      prefix: 'PO',
+      sources: [
+        { table: 'PurchaseOrder', column: 'number' },
+        { table: 'SupplierInvoice', column: 'number' },
+      ],
+    },
+    {
+      prefix: 'SO',
+      sources: [
+        { table: 'SalesOrder', column: 'number' },
+        { table: 'CustomerInvoice', column: 'number' },
       ],
     },
     { prefix: 'CN', sources: [{ table: 'CreditNote', column: 'number' }] },
@@ -51,6 +65,7 @@ export class DocumentSequenceService {
   /**
    * Allocate the next number for a (bookId, prefix) pair.
    * Returns a zero-padded 5-digit string like INV-00001, JV-00001, etc.
+   * `pad` is 5 by default; pass 4 for JV/PO styles.
    */
   async next(bookId: string, prefix: string, pad = 5): Promise<string> {
     return this.prisma.$transaction(async (tx) => {

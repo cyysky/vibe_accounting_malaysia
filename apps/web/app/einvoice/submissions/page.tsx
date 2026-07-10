@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCcw, Send, X, Ban, Download } from 'lucide-react';
+import { RefreshCcw, Send, X, Ban, Download, ShieldCheck } from 'lucide-react';
 import { api } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
@@ -95,6 +97,13 @@ export default function EinvoiceSubmissionsPage() {
             align: 'right',
             render: (s) => (
               <div className="flex justify-end gap-1">
+                {s.invoiceId && (
+                  <Link href={`/receivables/${s.invoiceId}`} title="Re-validate invoice">
+                    <Button size="sm" variant="ghost">
+                      <ShieldCheck className="h-4 w-4 text-sky-600" /> Validate
+                    </Button>
+                  </Link>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => poll.mutate(s.id)} disabled={poll.isPending}>
                   <RefreshCcw className="h-4 w-4" /> Poll
                 </Button>

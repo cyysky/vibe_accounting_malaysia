@@ -59,6 +59,7 @@ export default function BillDetailPage() {
       <PageHeader
         title={'Bill ' + inv.number}
         description={'Supplier: ' + (inv.supplierName ?? inv.supplierId)}
+        descriptionHref={'/payables/suppliers/' + inv.supplierId}
         breadcrumbs={[{ label: 'Payables', href: '/payables' }, { label: inv.number ?? '' }]}
         actions={
           <div className='flex items-center gap-2'>

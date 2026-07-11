@@ -139,6 +139,42 @@ nginx :8080  ──►  api :3000  ──►  postgres (internal)
 whole stack.  Postgres and Redis live on the internal Docker network;
 nginx is the only published port.
 
+## Web detail pages and system-wide linking
+
+Every list page deep-links to a detail page and every detail page exposes
+shortcut buttons back to the parent workflow:
+
+| List page               | Detail page                       | Shortcut buttons                                |
+| ----------------------- | --------------------------------- | ----------------------------------------------- |
+| `/receivables`         | `/receivables/[id]`              | Customer payment, credit note, MyInvois buttons |
+| `/receivables/customers/[id]` | (same)                       | Outstanding + tax + contact + audit activity    |
+| `/payables`            | `/payables/[id]`                 | Supplier payment, debit note                    |
+| `/payables/suppliers/[id]`    | (same)                       | Outstanding + tax + contact + audit activity    |
+| `/sales`               | `/sales/[id]`                    | Create invoice                                  |
+| `/purchase`            | `/purchase/[id]`                 | Record bill                                     |
+| `/recurring`           | `/recurring/[id]`                 | Run now, delete, upcoming-due-dates panel       |
+
+- The invoice / bill lists link the customer / supplier name to the
+  matching detail page.
+- Credit notes / debit notes / customer payments / supplier payments
+  lists link the related invoice / bill number to its detail page.
+- The dashboard's "Recent activity" feed uses an `entityHref()` helper
+  to route each entity name to its detail page based on entity type.
+
+## Testing
+
+20 Jest test suites / 116 unit tests covering: GL (service + posting),
+AR, AP, e-invoice mapper (basic + extras), UBL 2.1 validator (basic +
+extras), MyInvois HTTP client, recurring, stock, bank accounts, payments
+(customer + supplier), credit notes, debit notes, sales orders,
+purchase orders, audit log (+ CSV escape rules), auth.
+
+4 live HTTP e2e suites: happy-path, auth-matrix, einvoice, extra.
+Extra covers the new `/sales/orders/:id`, `/purchase/orders/:id` and
+`/ar/sales-orders/:id/convert-to-invoice` endpoints in addition to the
+existing audit-log / cash-flow / dashboard-search / fiscal-year /
+journal-reverse coverage.
+
 ## Audit log
 
 `AuditLogService` records `CREATE / UPDATE / DELETE / POST / SUBMIT /

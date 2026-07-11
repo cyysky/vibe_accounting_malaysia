@@ -473,6 +473,9 @@ class ApiClient {
   deleteCustomer(id: string): Promise<void> {
     return this.request<void>('DELETE', `/ar/customers/${id}`);
   }
+  getCustomer(id: string): Promise<Customer> {
+    return this.request<Customer>('GET', '/ar/customers/' + id);
+  }
 
   customerInvoices(page = 1, pageSize = 50, customerId?: string): Promise<PaginatedResponse<CustomerInvoice>> {
     return this.request<PaginatedResponse<CustomerInvoice>>('GET', '/ar/invoices', undefined, { page, pageSize, customerId });
@@ -514,7 +517,6 @@ class ApiClient {
   deleteSupplier(id: string): Promise<void> {
     return this.request<void>('DELETE', `/ap/suppliers/${id}`);
   }
-
   supplierInvoices(page = 1, pageSize = 50, supplierId?: string): Promise<PaginatedResponse<SupplierInvoice>> {
     return this.request<PaginatedResponse<SupplierInvoice>>('GET', '/ap/invoices', undefined, { page, pageSize, supplierId });
   }

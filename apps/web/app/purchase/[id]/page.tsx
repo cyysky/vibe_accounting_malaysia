@@ -55,6 +55,7 @@ export default function PurchaseOrderDetailPage() {
       <PageHeader
         title={'Purchase Order ' + po.number}
         description={'Supplier: ' + (po.supplierName ?? po.supplierId)}
+        descriptionHref={'/payables/suppliers/' + po.supplierId}
         breadcrumbs={[{ label: 'Purchase', href: '/purchase' }, { label: po.number ?? '' }]}
         actions={
           <div className='flex items-center gap-2'>

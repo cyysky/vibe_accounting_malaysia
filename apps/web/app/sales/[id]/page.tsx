@@ -55,6 +55,7 @@ export default function SalesOrderDetailPage() {
       <PageHeader
         title={"Sales Order " + so.number}
         description={"Customer: " + (so.customerName ?? so.customerId)}
+        descriptionHref={'/receivables/customers/' + so.customerId}
         breadcrumbs={[{ label: "Sales", href: "/sales" }, { label: so.number ?? "" }]}
         actions={
           <div className="flex items-center gap-2">

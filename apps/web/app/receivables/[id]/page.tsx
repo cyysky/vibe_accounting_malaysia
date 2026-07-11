@@ -111,6 +111,7 @@ export default function InvoiceDetailPage() {
       <PageHeader
         title={'Invoice ' + inv.number}
         description={'Customer: ' + (inv.customerName ?? inv.customerId)}
+        descriptionHref={'/receivables/customers/' + inv.customerId}
         breadcrumbs={[{ label: 'Receivables', href: '/receivables' }, { label: inv.number ?? '' }]}
         actions={
           <div className="flex items-center gap-2">

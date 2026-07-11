@@ -13,12 +13,13 @@ export interface BreadcrumbItem {
 export interface PageHeaderProps {
   title: string;
   description?: string;
+  descriptionHref?: string;
   breadcrumbs?: BreadcrumbItem[];
   actions?: ReactNode;
   className?: string;
 }
 
-export function PageHeader({ title, description, breadcrumbs, actions, className }: PageHeaderProps) {
+export function PageHeader({ title, description, descriptionHref, breadcrumbs, actions, className }: PageHeaderProps) {
   return (
     <div className={clsx("mb-6 flex flex-wrap items-end justify-between gap-3 border-b pb-4", className)}>
       <div className="min-w-0 flex-1">
@@ -42,7 +43,14 @@ export function PageHeader({ title, description, breadcrumbs, actions, className
           </nav>
         )}
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+        {description && descriptionHref ? (
+          <p className="mt-1 text-sm text-slate-500">
+            {description}{" "}
+            <Link href={descriptionHref} className="text-brand-700 hover:underline">View →</Link>
+          </p>
+        ) : (
+          description && <p className="mt-1 text-sm text-slate-500">{description}</p>
+        )}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

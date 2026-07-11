@@ -114,7 +114,7 @@ export default function ReceivablesPage() {
           empty="No customers yet — click New Customer to get started."
           columns={[
             { key: 'code', header: 'Code', render: (c) => <span className="font-mono text-xs">{c.code}</span> },
-            { key: 'name', header: 'Name', render: (c) => <span className="font-medium">{c.name}</span> },
+            { key: 'name', header: 'Name', render: (c) => <a href={'/receivables/customers/' + c.id} className="font-medium text-brand-700 hover:underline">{c.name}</a> },
             { key: 'taxId', header: 'TIN', render: (c) => c.taxId ?? '—' },
             { key: 'currency', header: 'Currency', render: (c) => c.currency },
             { key: 'creditLimit', header: 'Credit Limit', align: 'right', render: (c) => fmt(c.creditLimit) },
@@ -174,7 +174,7 @@ export default function ReceivablesPage() {
                 </a>
               ),
             },
-            { key: 'customer', header: 'Customer', render: (i) => i.customerName },
+            { key: 'customer', header: 'Customer', render: (i) => <a href={'/receivables/customers/' + i.customerId} className="text-brand-700 hover:underline">{i.customerName}</a> },
             { key: 'date', header: 'Date', render: (i) => i.date },
             { key: 'due', header: 'Due', render: (i) => i.dueDate },
             { key: 'total', header: 'Total', align: 'right', render: (i) => fmt(i.total) },

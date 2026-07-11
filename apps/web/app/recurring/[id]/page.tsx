@@ -58,6 +58,7 @@ export default function RecurringDetailPage() {
       <PageHeader
         title={t.name}
         description={"Template for " + (t.customer?.name ?? t.customerId)}
+        descriptionHref={"/receivables/customers/" + t.customerId}
         breadcrumbs={[{ label: "Recurring", href: "/recurring" }, { label: t.name ?? "" }]}
         actions={
           <div className="flex items-center gap-2">

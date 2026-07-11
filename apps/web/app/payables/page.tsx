@@ -105,7 +105,7 @@ export default function PayablesPage() {
           empty="No suppliers yet."
           columns={[
             { key: 'code', header: 'Code', render: (s) => <span className="font-mono text-xs">{s.code}</span> },
-            { key: 'name', header: 'Name', render: (s) => <span className="font-medium">{s.name}</span> },
+            { key: 'name', header: 'Name', render: (s) => <a href={'/payables/suppliers/' + s.id} className="font-medium text-brand-700 hover:underline">{s.name}</a> },
             { key: 'taxId', header: 'TIN', render: (s) => s.taxId ?? '—' },
             { key: 'currency', header: 'Currency', render: (s) => s.currency },
             { key: 'outstanding', header: 'Outstanding', align: 'right', render: (s) => fmt(s.outstanding) },
@@ -146,7 +146,7 @@ export default function PayablesPage() {
           empty="No bills yet."
           columns={[
             { key: 'number', header: 'Number', render: (i) => <a href={`/payables/${i.id}`} className="flex items-center gap-1 font-mono text-xs text-brand-700 hover:underline"><FileText className="h-3.5 w-3.5" /> {i.number}</a> },
-            { key: 'supplier', header: 'Supplier', render: (i) => i.supplierName },
+            { key: 'supplier', header: 'Supplier', render: (i) => <a href={'/payables/suppliers/' + i.supplierId} className="text-brand-700 hover:underline">{i.supplierName}</a> },
             { key: 'date', header: 'Date', render: (i) => i.date },
             { key: 'due', header: 'Due', render: (i) => i.dueDate },
             { key: 'total', header: 'Total', align: 'right', render: (i) => fmt(i.total) },

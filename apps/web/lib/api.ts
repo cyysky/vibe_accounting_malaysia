@@ -549,12 +549,66 @@ class ApiClient {
     return this.request('GET', '/sales/orders', undefined, { page, pageSize });
   }
 
+  getSalesOrder(id: string): Promise<{
+    id: string;
+    number: string;
+    customerId: string;
+    customerName?: string;
+    date: string;
+    subtotal: number | string;
+    taxTotal?: number | string;
+    total: number | string;
+    status: string;
+    notes?: string;
+    lines?: Array<{
+      id?: string;
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      discount?: number;
+      taxCodeId?: string;
+      taxAmount?: number;
+      subtotal?: number;
+      total?: number;
+      lineNo?: number;
+    }>;
+  }> {
+    return this.request('GET', '/sales/orders/' + id);
+  }
+
   createSalesOrder(input: { customerId: string; date: string; total: number; notes?: string }): Promise<unknown> {
     return this.request('POST', '/sales/orders', input);
   }
 
   purchaseOrders(page = 1, pageSize = 50): Promise<PaginatedResponse<{ id: string; number: string; supplierName?: string; date: string; total: number; status: string }>> {
     return this.request('GET', '/purchase/orders', undefined, { page, pageSize });
+  }
+
+  getPurchaseOrder(id: string): Promise<{
+    id: string;
+    number: string;
+    supplierId: string;
+    supplierName?: string;
+    date: string;
+    subtotal: number | string;
+    taxTotal?: number | string;
+    total: number | string;
+    status: string;
+    notes?: string;
+    lines?: Array<{
+      id?: string;
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      discount?: number;
+      taxCodeId?: string;
+      taxAmount?: number;
+      subtotal?: number;
+      total?: number;
+      lineNo?: number;
+    }>;
+  }> {
+    return this.request('GET', '/purchase/orders/' + id);
   }
 
   createPurchaseOrder(input: { supplierId: string; date: string; total: number; notes?: string }): Promise<unknown> {

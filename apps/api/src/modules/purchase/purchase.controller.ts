@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PurchaseService } from './purchase.service';
 import { CreatePurchaseOrderDto, UpdatePurchaseOrderDto } from './dto/purchase-order.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -19,6 +19,7 @@ export class PurchaseController {
     return this.svc.listOrders(user.accountBookId, Number(page ?? 1), Number(pageSize ?? 50));
   }
 
+  @ApiOperation({ summary: "Get a purchase order by id" })
   @Get('orders/:id')
   order(@Param('id') id: string) {
     return this.svc.getOrder(id);

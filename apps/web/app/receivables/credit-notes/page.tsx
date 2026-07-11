@@ -235,7 +235,7 @@ export default function CreditNotesPage() {
           { key: "number", header: "Number", render: (r) => <span className="font-mono">{r.number}</span> },
           { key: "date", header: "Date", render: (r) => r.date },
           { key: "customer", header: "Customer", render: (r) => r.customer?.name ?? "-" },
-          { key: "invoice", header: "Invoice", render: (r) => r.invoice?.number ?? "—" },
+          { key: "invoice", header: "Invoice", render: (r) => r.invoice ? <a href={'/receivables/' + r.invoice.id} className="font-mono text-xs text-brand-700 hover:underline">{r.invoice.number}</a> : "—" },
           { key: "reason", header: "Reason" },
           { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status} /> },
           { key: "total", header: "Total", align: "right", render: (r) => <span className="tabular-nums">{fmt(Number(r.total))}</span> },

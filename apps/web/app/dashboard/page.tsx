@@ -26,6 +26,27 @@ function fmt(n: number): string {
   return (n ?? 0).toLocaleString("en-MY", { style: "currency", currency: "MYR", maximumFractionDigits: 0 });
 }
 
+
+function entityHref(entity: string, entityId: string): string | null {
+  switch (entity) {
+    case "CustomerInvoice":
+    case "CreditNote":
+    case "RecurringInvoice":
+      return "/receivables/" + entityId;
+    case "SupplierInvoice":
+    case "DebitNote":
+      return "/payables/" + entityId;
+    case "SalesOrder":
+      return "/sales/" + entityId;
+    case "PurchaseOrder":
+      return "/purchase/" + entityId;
+    case "JournalEntry":
+      return "/dashboard/journal";
+    default:
+      return null;
+  }
+}
+
 function QuickAction({ href, icon: Icon, label, hint }: { href: string; icon: React.ComponentType<{ className?: string }>; label: string; hint?: string }) {
   return (
     <Link
@@ -204,7 +225,7 @@ export default function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-xs">
                       <span className="font-semibold text-slate-700">{e.action}</span>
-                      <span className="ml-1 text-slate-500">{e.entity}</span>
+                      {(() => { const href = entityHref(e.entity, e.entityId); return href ? <Link href={href} className="ml-1 text-slate-500 hover:text-brand-700 hover:underline">{e.entity}</Link> : <span className="ml-1 text-slate-500">{e.entity}</span>; })()}
                     </div>
                     <div className="text-[11px] text-slate-400">
                       {e.user?.name ?? e.user?.email ?? 'system'} • {new Date(e.createdAt).toLocaleString('en-MY')}

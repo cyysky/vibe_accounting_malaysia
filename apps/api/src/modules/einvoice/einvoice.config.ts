@@ -52,6 +52,30 @@ const PRODUCTION: EinvoiceEndpoints = {
   getRecent: '/api/v1.0/documents/recent',
 };
 
+/**
+ * MyInvois payment means codes (per LHDNM SDK, UBL 2.1 PaymentMeansCode).
+ * Used in the UBL document's PayableRoundingAmount / PaymentMeans block.
+ * Source: https://sdk.myinvois.hasil.gov.my/
+ */
+export const PAYMENT_MODE_CODES: ReadonlyArray<{ code: string; displayName: string }> = [
+  { code: "01", displayName: "Cash" },
+  { code: "02", displayName: "Cheque" },
+  { code: "03", displayName: "Bank Transfer" },
+  { code: "04", displayName: "Credit Card" },
+  { code: "05", displayName: "Debit Card" },
+  { code: "06", displayName: "e-Wallet / Online Banking" },
+  { code: "07", displayName: "Direct Debit" },
+  { code: "08", displayName: "FPX" },
+  { code: "09", displayName: "e-Money" },
+  { code: "10", displayName: "PayPal / Online Payment" },
+];
+
+export function paymentModeDisplayName(code: string | null | undefined): string {
+  if (!code) return "";
+  const hit = PAYMENT_MODE_CODES.find((p) => p.code === code);
+  return hit ? hit.displayName : code;
+}
+
 @Injectable()
 export class EinvoiceSettingsService {
   constructor(private readonly config: ConfigService) {}

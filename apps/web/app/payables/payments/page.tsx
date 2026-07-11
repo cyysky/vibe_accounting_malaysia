@@ -200,7 +200,7 @@ export default function SupplierPaymentsPage() {
           { key: "supplier", header: "Supplier", render: (r) => r.supplier?.name ?? "-" },
           { key: "method", header: "Method", render: (r) => <StatusBadge status={r.method} /> },
           { key: "amount", header: "Amount", align: "right", render: (r) => <span className="tabular-nums">{fmt(Number(r.amount))}</span> },
-          { key: "applied", header: "Applied to", render: (r) => r.applications.map((a) => a.invoice?.number).filter(Boolean).join(", ") || "—" },
+          { key: "applied", header: "Applied to", render: (r) => r.applications.length === 0 ? "—" : r.applications.map((a) => a.invoice ? <a key={a.invoice.id} href={'/payables/' + a.invoice.id} className="font-mono text-xs text-brand-700 hover:underline mr-1">{a.invoice.number}</a> : null) },
           { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status} /> },
         ]}
       />

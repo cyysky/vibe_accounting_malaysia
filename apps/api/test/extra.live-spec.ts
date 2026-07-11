@@ -213,4 +213,49 @@ describe('Extra endpoints (e2e over HTTP)', () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it('GET /api/sales/orders/:id returns the order (or 404 when missing)', async () => {
+    const list = await http('/api/sales/orders', { token });
+    const arr: Array<{ id: string }> = (() => {
+      const b: any = list.body;
+      if (Array.isArray(b?.data?.data)) return b.data.data;
+      if (Array.isArray(b?.data)) return b.data;
+      return [];
+    })();
+    if (arr.length > 0) {
+      const r = await http('/api/sales/orders/' + arr[0].id, { token });
+      expect(r.status).toBe(200);
+      const id = (r.body?.data && r.body.data.id) || r.body.id;
+      expect(id).toBe(arr[0].id);
+    }
+    const missing = await http('/api/sales/orders/00000000-0000-0000-0000-000000000000', { token });
+    expect(missing.status).toBe(404);
+  });
+
+  it('GET /api/purchase/orders/:id returns the order (or 404 when missing)', async () => {
+    const list = await http('/api/purchase/orders', { token });
+    const arr: Array<{ id: string }> = (() => {
+      const b: any = list.body;
+      if (Array.isArray(b?.data?.data)) return b.data.data;
+      if (Array.isArray(b?.data)) return b.data;
+      return [];
+    })();
+    if (arr.length > 0) {
+      const r = await http('/api/purchase/orders/' + arr[0].id, { token });
+      expect(r.status).toBe(200);
+      const id = (r.body?.data && r.body.data.id) || r.body.id;
+      expect(id).toBe(arr[0].id);
+    }
+    const missing = await http('/api/purchase/orders/00000000-0000-0000-0000-000000000000', { token });
+    expect(missing.status).toBe(404);
+  });
+
+  it('POST /api/ar/sales-orders/:id/convert-to-invoice returns 404 for unknown SO', async () => {
+    const r = await http('/api/ar/sales-orders/00000000-0000-0000-0000-000000000000/convert-to-invoice', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+    });
+    expect([400, 404]).toContain(r.status);
+  });
 });

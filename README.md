@@ -59,6 +59,26 @@ front end, packaged as a self-contained Docker Compose stack.
 | `audit-log`       | Entity-level activity feed                                                    |
 | `health`          | Container / app liveness                                                      |
 
+## System-wide linking
+
+Every list page deep-links to the related detail page; every detail page
+exposes shortcut buttons back to the parent workflow:
+
+- **Receivables** – invoices at `/receivables/[id]` with shortcut buttons
+  for customer payment, credit note, e-Invoice validate / submit, audit
+  activity, and live submission status (poll / cancel).
+- **Payables** – bills at `/payables/[id]` with shortcuts for supplier
+  payment and debit note.
+- **Sales orders** – `/sales/[id]` with shortcut to create invoice.
+- **Purchase orders** – `/purchase/[id]` with shortcut to record bill.
+- **Dashboard** – the "Recent activity" feed links each entity name to its
+  detail page using the `entityHref()` helper.
+
+Credit notes / debit notes / payments lists link their related invoice or
+bill numbers to the underlying document.
+
+
+
 ## Quick start
 
 ```powershell
@@ -105,10 +125,32 @@ Then open <http://localhost:8080> and sign in with
   counter-posting that flips every line's debit & credit, marks the
   original entry REVERSED, and keeps the trial balance intact.
 
+## GL endpoints
+
+- `GET    /api/gl/trial-balance?asOf=YYYY-MM-DD` – debit / credit per
+  account (defaults to today).
+- `POST   /api/gl/journals/:id/reverse` – flip every line, mark original
+  `REVERSED`, create a counter-posting.
+- `POST   /api/gl/fiscal-years/:id/close` – block future postings.
+- `POST   /api/gl/fiscal-years/:id/reopen` – re-open a closed period.
+
+All four endpoints are documented in Swagger at `/api/docs` (with
+`@ApiOperation` and `@ApiResponse` annotations).
+
+## MyInvois SDK coverage
+
+In addition to state codes, tax types, document types and allowance
+aggregation, the mapper and config module also expose:
+
+- `PAYMENT_MODE_CODES` – the full MyInvois PaymentMeans list (01-10:
+  Cash, Cheque, Bank Transfer, Credit/Debit Card, e-Wallet, Direct Debit,
+  FPX, e-Money, Online Payment) plus `paymentModeDisplayName()` helper
+  to render the human-readable label in the UI.
+
 ## Tests
 
 - **Unit tests** (
-px jest in pps/api) — 66 tests across 14 suites
+px jest in pps/api) — 95 tests across 18 suites
   covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
   reports / credit-notes / auth services plus the UBL mapper, UBL validator
   and MyInvois HTTP client.
@@ -122,7 +164,7 @@ px jest --config ./test/jest-e2e.json) — run
 ## Tests
 
 - **Unit tests** (
-px jest in pps/api) — 66 tests across 14 suites
+px jest in pps/api) — 95 tests across 18 suites
   covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
   reports / credit-notes / auth services plus the UBL mapper, UBL validator
   and MyInvois HTTP client.

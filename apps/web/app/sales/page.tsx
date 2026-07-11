@@ -69,7 +69,7 @@ export default function SalesPage() {
         rowKey={(o) => o.id}
         empty="No sales orders yet."
         columns={[
-          { key: 'number', header: 'Number', render: (o) => <span className="font-mono text-xs">{o.number}</span> },
+          { key: 'number', header: 'Number', render: (o) => <a href={'/sales/' + o.id} className="font-mono text-xs text-brand-700 hover:underline">{o.number}</a> },
           { key: 'customer', header: 'Customer', render: (o) => o.customerName },
           { key: 'date', header: 'Date', render: (o) => o.date },
           { key: 'total', header: 'Total', align: 'right', render: (o) => fmt(o.total) },

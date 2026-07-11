@@ -166,6 +166,25 @@ Mandatory party fields:
 
 The mapper throws on missing TIN at the API layer.
 
+## PaymentMeans codes
+
+Per the [MyInvois PaymentMeans list](https://sdk.myinvois.hasil.gov.my/codes/payment-means/) the platform exposes the full set of UBL 2.1 PaymentMeans codes via `PAYMENT_MODE_CODES` in `apps/api/src/modules/einvoice/einvoice.config.ts`:
+
+| Code | Display name             |
+| ---- | ------------------------ |
+| 01   | Cash                     |
+| 02   | Cheque                   |
+| 03   | Bank Transfer            |
+| 04   | Credit Card              |
+| 05   | Debit Card               |
+| 06   | e-Wallet / Online Banking |
+| 07   | Direct Debit             |
+| 08   | FPX                      |
+| 09   | e-Money                  |
+| 10   | PayPal / Online Payment  |
+
+Use the helper `paymentModeDisplayName(code)` to render the human-readable label in the UI.
+
 ## Pre-submission validation
 
 Before every submission we run a 100% in-process UBL 2.1 v1.1 conformance

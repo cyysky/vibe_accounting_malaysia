@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { GlService } from "./gl.service";
 import { CreateAccountDto, UpdateAccountDto } from "./dto/account.dto";
 import { CreateJournalDto } from "./dto/journal.dto";
@@ -82,6 +82,9 @@ export class GlController {
    * posting entry and marks the original as REVERSED.
    */
   @Post("journals/:id/reverse")
+  @ApiOperation({ summary: "Reverse a posted journal entry", description: "Flips every line, creates a new posting entry and marks the original as REVERSED." })
+  @ApiResponse({ status: 201, description: "Reversal entry created." })
+  @ApiResponse({ status: 404, description: "Journal not found." })
   reverseJournal(
     @CurrentUser() user: AuthUser,
     @Param("id") id: string,
@@ -91,6 +94,8 @@ export class GlController {
   }
 
   @Get("trial-balance")
+  @ApiOperation({ summary: "Trial balance", description: "Sum of debit / credit per account as of an optional cutoff date (defaults to today)." })
+  @ApiResponse({ status: 200, description: "Array of { account, debit, credit }." })
   trialBalance(
     @CurrentUser() user: AuthUser,
     @Query("asOf") asOf?: string,
@@ -151,11 +156,17 @@ export class GlController {
   }
 
   @Post("fiscal-years/:id/close")
+  @ApiOperation({ summary: "Close a fiscal year", description: "Marks the period as closed; postings will be blocked thereafter." })
+  @ApiResponse({ status: 200, description: "Updated fiscal year with closed=true." })
+  @ApiResponse({ status: 404, description: "Fiscal year not found." })
   closeFiscalYear(@Param("id") id: string): Promise<Record<string, unknown>> {
     return this.svc.closeFiscalYear(id);
   }
 
   @Post("fiscal-years/:id/reopen")
+  @ApiOperation({ summary: "Re-open a closed fiscal year", description: "Marks the period as open again so postings are permitted." })
+  @ApiResponse({ status: 200, description: "Updated fiscal year with closed=false." })
+  @ApiResponse({ status: 404, description: "Fiscal year not found." })
   reopenFiscalYear(@Param("id") id: string): Promise<Record<string, unknown>> {
     return this.svc.reopenFiscalYear(id);
   }

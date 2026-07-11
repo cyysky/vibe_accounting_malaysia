@@ -209,7 +209,7 @@ export default function DebitNotesPage() {
           { key: "number", header: "Number", render: (r) => <span className="font-mono">{r.number}</span> },
           { key: "date", header: "Date" },
           { key: "supplier", header: "Supplier", render: (r) => r.supplier?.name ?? "-" },
-          { key: "bill", header: "Bill", render: (r) => r.invoice?.number ?? "—" },
+          { key: "bill", header: "Bill", render: (r) => r.invoice ? <a href={'/payables/' + r.invoice.id} className="font-mono text-xs text-brand-700 hover:underline">{r.invoice.number}</a> : "—" },
           { key: "reason", header: "Reason" },
           { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status} /> },
           { key: "total", header: "Total", align: "right", render: (r) => <span className="tabular-nums">{fmt(Number(r.total))}</span> },

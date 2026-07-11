@@ -1,32 +1,34 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { GlService } from './gl.service';
-import { CreateAccountDto, UpdateAccountDto } from './dto/account.dto';
-import { CreateJournalDto } from './dto/journal.dto';
-import { CreateTaxCodeDto, UpdateTaxCodeDto } from './dto/tax-code.dto';
-import { CreateFiscalYearDto, UpdateFiscalYearDto } from './dto/fiscal-year.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import type { AuthUser } from '@account/shared';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { GlService } from "./gl.service";
+import { CreateAccountDto, UpdateAccountDto } from "./dto/account.dto";
+import { CreateJournalDto } from "./dto/journal.dto";
+import { CreateTaxCodeDto, UpdateTaxCodeDto } from "./dto/tax-code.dto";
+import { CreateFiscalYearDto, UpdateFiscalYearDto } from "./dto/fiscal-year.dto";
+import { ReverseJournalDto } from "./dto/reverse-journal.dto";
+import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import type { AuthUser } from "@account/shared";
 
-@ApiTags('gl')
+@ApiTags("gl")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('gl')
+@Controller("gl")
 export class GlController {
   constructor(private readonly svc: GlService) {}
 
   private bookIdOrThrow(user: AuthUser): string {
-    if (!user.accountBookId) throw new Error('User has no account book');
+    if (!user.accountBookId) throw new Error("User has no account book");
     return user.accountBookId;
   }
 
-  @Get('accounts')
+  // --- Chart of accounts ---------------------------------------------------
+  @Get("accounts")
   accounts(@CurrentUser() user: AuthUser): Promise<Array<Record<string, unknown>>> {
     return this.svc.listAccounts(this.bookIdOrThrow(user));
   }
 
-  @Post('accounts')
+  @Post("accounts")
   createAccount(
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateAccountDto,
@@ -34,34 +36,35 @@ export class GlController {
     return this.svc.createAccount(this.bookIdOrThrow(user), dto);
   }
 
-  @Put('accounts/:id')
+  @Put("accounts/:id")
   updateAccount(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateAccountDto,
   ): Promise<Record<string, unknown>> {
     return this.svc.updateAccount(id, dto);
   }
 
-  @Delete('accounts/:id')
-  deleteAccount(@Param('id') id: string): Promise<void> {
+  @Delete("accounts/:id")
+  deleteAccount(@Param("id") id: string): Promise<void> {
     return this.svc.deleteAccount(id);
   }
 
-  @Get('accounts/:id')
-  account(@Param('id') id: string): Promise<Record<string, unknown>> {
+  @Get("accounts/:id")
+  account(@Param("id") id: string): Promise<Record<string, unknown>> {
     return this.svc.getAccount(id);
   }
 
-  @Get('journals')
+  // --- Journal entries -----------------------------------------------------
+  @Get("journals")
   journals(
     @CurrentUser() user: AuthUser,
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
   ) {
     return this.svc.listJournals(this.bookIdOrThrow(user), Number(page ?? 1), Number(pageSize ?? 50));
   }
 
-  @Post('journals')
+  @Post("journals")
   createJournal(
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateJournalDto,
@@ -69,23 +72,42 @@ export class GlController {
     return this.svc.createJournal(this.bookIdOrThrow(user), dto);
   }
 
-  @Get('journals/:id')
-  journal(@Param('id') id: string): Promise<Record<string, unknown>> {
+  @Get("journals/:id")
+  journal(@Param("id") id: string): Promise<Record<string, unknown>> {
     return this.svc.getJournal(id);
   }
 
-  @Get('trial-balance')
-  trialBalance(@CurrentUser() user: AuthUser) {
-    return this.svc.trialBalance(this.bookIdOrThrow(user));
+  /**
+   * Reverse a posted journal entry.  Flips every line, creates a new
+   * posting entry and marks the original as REVERSED.
+   */
+  @Post("journals/:id/reverse")
+  reverseJournal(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Body() dto: ReverseJournalDto,
+  ): Promise<Record<string, unknown>> {
+    return this.svc.reverseJournal(this.bookIdOrThrow(user), id, dto?.reason);
   }
 
-  // --- Tax codes ---
-  @Get('tax-codes')
+  @Get("trial-balance")
+  trialBalance(
+    @CurrentUser() user: AuthUser,
+    @Query("asOf") asOf?: string,
+  ) {
+    return this.svc.trialBalance(
+      this.bookIdOrThrow(user),
+      asOf ? new Date(asOf) : undefined,
+    );
+  }
+
+  // --- Tax codes -----------------------------------------------------------
+  @Get("tax-codes")
   taxCodes(@CurrentUser() user: AuthUser): Promise<Array<Record<string, unknown>>> {
     return this.svc.listTaxCodes(this.bookIdOrThrow(user));
   }
 
-  @Post('tax-codes')
+  @Post("tax-codes")
   createTaxCode(
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateTaxCodeDto,
@@ -93,26 +115,26 @@ export class GlController {
     return this.svc.createTaxCode(this.bookIdOrThrow(user), dto);
   }
 
-  @Put('tax-codes/:id')
+  @Put("tax-codes/:id")
   updateTaxCode(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateTaxCodeDto,
   ): Promise<Record<string, unknown>> {
     return this.svc.updateTaxCode(id, dto);
   }
 
-  @Delete('tax-codes/:id')
-  deleteTaxCode(@Param('id') id: string): Promise<void> {
+  @Delete("tax-codes/:id")
+  deleteTaxCode(@Param("id") id: string): Promise<void> {
     return this.svc.deleteTaxCode(id);
   }
 
-  // --- Fiscal years ---
-  @Get('fiscal-years')
+  // --- Fiscal years --------------------------------------------------------
+  @Get("fiscal-years")
   fiscalYears(@CurrentUser() user: AuthUser): Promise<Array<Record<string, unknown>>> {
     return this.svc.listFiscalYears(this.bookIdOrThrow(user));
   }
 
-  @Post('fiscal-years')
+  @Post("fiscal-years")
   createFiscalYear(
     @CurrentUser() user: AuthUser,
     @Body() dto: CreateFiscalYearDto,
@@ -120,16 +142,26 @@ export class GlController {
     return this.svc.createFiscalYear(this.bookIdOrThrow(user), dto);
   }
 
-  @Put('fiscal-years/:id')
+  @Put("fiscal-years/:id")
   updateFiscalYear(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() dto: UpdateFiscalYearDto,
   ): Promise<Record<string, unknown>> {
     return this.svc.updateFiscalYear(id, dto);
   }
 
-  @Delete('fiscal-years/:id')
-  deleteFiscalYear(@Param('id') id: string): Promise<void> {
+  @Post("fiscal-years/:id/close")
+  closeFiscalYear(@Param("id") id: string): Promise<Record<string, unknown>> {
+    return this.svc.closeFiscalYear(id);
+  }
+
+  @Post("fiscal-years/:id/reopen")
+  reopenFiscalYear(@Param("id") id: string): Promise<Record<string, unknown>> {
+    return this.svc.reopenFiscalYear(id);
+  }
+
+  @Delete("fiscal-years/:id")
+  deleteFiscalYear(@Param("id") id: string): Promise<void> {
     return this.svc.deleteFiscalYear(id);
   }
 }

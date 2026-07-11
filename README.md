@@ -70,6 +70,24 @@ Then open <http://localhost:8080> and sign in with
 `admin@example.com` / `ChangeMe!123`.
 
 
+## MyInvois (LHDNM e-Invoice) compliance highlights
+
+- **State codes** are mapped from the customer's free-form state name to the
+  ISO-3166-2:MY code per
+  [sdk.myinvois.hasil.gov.my/codes/state-codes](https://sdk.myinvois.hasil.gov.my/codes/state-codes/)
+  (01-17 with 17 = Not Applicable).
+- **Tax type code** is carried on every TaxCategory (01..06 or E for
+  exemption) per the MyInvois Tax Type table.
+- **Document type codes** are emitted correctly for all 8 supported
+  e-Invoice types: invoice (01), credit note (02), debit note (03),
+  refund note (04), self-billed invoice (11), self-billed credit note (12),
+  self-billed debit note (13), self-billed refund note (14).
+- **Allowance aggregation** — LegalMonetaryTotal/AllowanceTotalAmount
+  is computed from per-line discounts, satisfying the MyInvois validator.
+- **Pre-submission validator** — POST /api/einvoice/invoices/:id/validate
+  runs the in-process UBL validator without contacting MyInvois. UI
+  surfaces a green/red badge before users click Submit.
+
 ## Accounting automation
 
 - **Automatic GL posting** — every customer invoice or supplier bill
@@ -81,8 +99,38 @@ Then open <http://localhost:8080> and sign in with
   converts a sales order into a customer invoice and closes the SO.
 - **Fiscal years** — journals can only be posted to an open fiscal year;
   the bootstrap seed creates the current and next year automatically.
+  POST /api/gl/fiscal-years/:id/close and /reopen let you lock a
+  period from the UI or API.
+- **Journal reversal** — POST /api/gl/journals/:id/reverse creates a
+  counter-posting that flips every line's debit & credit, marks the
+  original entry REVERSED, and keeps the trial balance intact.
 
 ## Tests
+
+- **Unit tests** (
+px jest in pps/api) — 66 tests across 14 suites
+  covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
+  reports / credit-notes / auth services plus the UBL mapper, UBL validator
+  and MyInvois HTTP client.
+- **Live e2e tests** (
+px jest --config ./test/jest-e2e.json) — run
+  against a running stack; require the seeded admin user.
+
+## Highlights of recent hardening
+  the bootstrap seed creates the current and next year automatically.
+
+## Tests
+
+- **Unit tests** (
+px jest in pps/api) — 66 tests across 14 suites
+  covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
+  reports / credit-notes / auth services plus the UBL mapper, UBL validator
+  and MyInvois HTTP client.
+- **Live e2e tests** (
+px jest --config ./test/jest-e2e.json) — run
+  against a running stack; require the seeded admin user.
+
+## Highlights of recent hardening
 
 ```bash
 # Build the API test image and run unit tests

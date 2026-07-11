@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, X, ScrollText } from 'lucide-react';
+import { Plus, X, ScrollText, Undo2 } from 'lucide-react';
 import { api, type Account } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
@@ -65,6 +65,10 @@ export default function JournalPage() {
   );
   const balanced = Math.abs(totals.debit - totals.credit) < 0.001;
 
+  const reverse = useMutation({
+    mutationFn: (input: { id: string; reason?: string }) => api.reverseJournal(input.id, input.reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['journals'] }),
+  });
   const create = useMutation({
     mutationFn: (data: JournalForm) => api.createJournal(data),
     onSuccess: () => {
@@ -118,6 +122,27 @@ export default function JournalPage() {
           },
           { key: 'debit', header: 'Debit', align: 'right', render: (j) => fmt(j.totalDebit) },
           { key: 'credit', header: 'Credit', align: 'right', render: (j) => fmt(j.totalCredit) },
+          {
+            key: 'actions',
+            header: '',
+            align: 'right',
+            render: (j) => (
+              j.status === 'POSTED' ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={async () => {
+                    const reason = prompt('Reason for reversal?');
+                    if (reason === null) return;
+                    await reverse.mutateAsync({ id: j.id, reason: reason || undefined });
+                  }}
+                  loading={reverse.isPending}
+                >
+                  <Undo2 className="h-3.5 w-3.5" /> Reverse
+                </Button>
+              ) : null
+            ),
+          },
         ]}
       />
 

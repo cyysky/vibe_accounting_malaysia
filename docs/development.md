@@ -130,6 +130,7 @@ Three Jest suites under `apps/api/test/`:
 | `happy-path.live-spec.ts`  | AR/AP sales cycle + auto-POSTED journals + aging reports + audit + bank recon. |
 | `auth-matrix.live-spec.ts` | 401 on every protected read without a token; 200/201 with the seeded admin.    |
 | `einvoice.live-spec.ts`    | UBL pre-submission validator endpoint + `validateOnly: true` on `/submit`.     |
+| `extra.live-spec.ts`       | Audit-log CSV export, cash-flow report, dashboard search, fiscal year close/reopen, journal reversal. |
 
 Run with the API already up:
 

@@ -89,6 +89,34 @@ to `1.1` and emits JSON (XML is also supported by the MyInvois API).
 | 11   | Self-billed invoice        | `self-billed-invoice`           |
 | 12   | Self-billed credit note    | `self-billed-credit-note`       |
 | 13   | Self-billed debit note     | `self-billed-debit-note`        |
+| 14   | Self-billed refund note    | `self-billed-refund-note`       |
+
+### Malaysian state codes
+
+The mapper resolves free-form state names (`Selangor`, `Wilayah Persekutuan
+Kuala Lumpur`, `Penang`/`Pulau Pinang`, ...) to the ISO-3166-2:MY 2-digit
+codes required by MyInvois.  State `17` (Not Applicable) is used when the
+state is unknown.
+
+| Code | State                                |
+| ---- | ------------------------------------ |
+| 01   | Johor                                |
+| 02   | Kedah                                |
+| 03   | Kelantan                             |
+| 04   | Melaka / Malacca                     |
+| 05   | Negeri Sembilan                      |
+| 06   | Pahang                               |
+| 07   | Pulau Pinang / Penang                |
+| 08   | Perak                                |
+| 09   | Perlis                               |
+| 10   | Selangor                             |
+| 11   | Terengganu                           |
+| 12   | Sabah                                |
+| 13   | Sarawak                              |
+| 14   | Wilayah Persekutuan Kuala Lumpur     |
+| 15   | Wilayah Persekutuan Labuan           |
+| 16   | Wilayah Persekutuan Putrajaya        |
+| 17   | Not Applicable                       |
 
 The mapper (`buildUblInvoice` in `apps/api/src/modules/einvoice/mappers/invoice-v1.1.mapper.ts`)
 emits the canonical UBL 2.1 JSON v1.1 shape with:

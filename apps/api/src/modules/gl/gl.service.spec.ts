@@ -11,7 +11,14 @@ describe('GlService', () => {
 
   beforeEach(async () => {
     prisma = {
-      journalEntry: { count: jest.fn().mockResolvedValue(0), create: jest.fn(), findMany: jest.fn() },
+      journalEntry: {
+        count: jest.fn().mockResolvedValue(0),
+        create: jest.fn(),
+        findMany: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      $transaction: jest.fn(),
       account: { findMany: jest.fn().mockResolvedValue([]), findUnique: jest.fn() },
       fiscalYear: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn() },
       taxCode: { findUnique: jest.fn(), findMany: jest.fn().mockResolvedValue([]), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
@@ -110,4 +117,89 @@ describe('GlService', () => {
       ).rejects.toThrow(/after startDate/);
     });
   });
+
+
+  describe('reverseJournal', () => {
+    it('rejects reversing a journal that is not POSTED', async () => {
+      prisma.journalEntry.findUnique.mockResolvedValue({
+        id: 'j2',
+        accountBookId: 'book-1',
+        number: 'JV-0002',
+        date: new Date(),
+        status: 'DRAFT',
+        description: '',
+        reference: null,
+        lines: [],
+      });
+      await expect(service.reverseJournal('book-1', 'j2')).rejects.toThrow(/Only POSTED/);
+    });
+
+    it('rejects reversing a journal that has already been reversed', async () => {
+      prisma.journalEntry.findUnique.mockResolvedValue({
+        id: 'j3',
+        accountBookId: 'book-1',
+        number: 'JV-0003',
+        date: new Date(),
+        status: 'REVERSED',
+        description: '',
+        reference: null,
+        lines: [],
+      });
+      await expect(service.reverseJournal('book-1', 'j3')).rejects.toThrow(/already reversed/);
+    });
+
+    it('rejects reversing a journal that does not belong to the book', async () => {
+      prisma.journalEntry.findUnique.mockResolvedValue({
+        id: 'j4',
+        accountBookId: 'other-book',
+        number: 'JV-0004',
+        date: new Date(),
+        status: 'POSTED',
+        description: '',
+        reference: null,
+        lines: [],
+      });
+      await expect(service.reverseJournal('book-1', 'j4')).rejects.toThrow(/not found/);
+    });
+
+    it('creates a reversal with flipped debits/credits and marks the source REVERSED', async () => {
+      prisma.journalEntry.findUnique.mockResolvedValue({
+        id: 'j5',
+        accountBookId: 'book-1',
+        number: 'JV-0005',
+        date: new Date('2025-03-01'),
+        status: 'POSTED',
+        description: 'original',
+        reference: null,
+        totalDebit: PrismaDecimal(100),
+        totalCredit: PrismaDecimal(100),
+        lines: [
+          { id: 'l1', journalId: 'j5', accountId: 'a1', debit: PrismaDecimal(100), credit: PrismaDecimal(0), description: null, lineNo: 1 },
+          { id: 'l2', journalId: 'j5', accountId: 'a2', debit: PrismaDecimal(0), credit: PrismaDecimal(100), description: null, lineNo: 2 },
+        ],
+      });
+      prisma.journalEntry.create.mockResolvedValue({ id: 'j6', number: 'JV-0099', lines: [] });
+      prisma.journalEntry.update.mockResolvedValue({});
+      prisma.$transaction = jest.fn(async (cb) => {
+        const tx = {
+          journalEntry: {
+            create: prisma.journalEntry.create,
+            update: prisma.journalEntry.update,
+          },
+        };
+        return cb(tx);
+      });
+      await service.reverseJournal('book-1', 'j5', 'oops');
+      const createCall = prisma.journalEntry.create.mock.calls[0][0];
+      expect(createCall.data.description).toMatch(/REVERSAL of JV-0005/);
+      // The first line should have debit 0 (was 100) and credit 100 (was 0).
+      expect(Number(createCall.data.lines.create[0].debit)).toBe(0);
+      expect(Number(createCall.data.lines.create[0].credit)).toBe(100);
+      expect(prisma.journalEntry.update).toHaveBeenCalledWith({ where: { id: 'j5' }, data: { status: 'REVERSED' } });
+    });
+  });
 });
+
+function PrismaDecimal(v: number) {
+  return new (require('@prisma/client').Prisma.Decimal)(v);
+}

@@ -48,7 +48,8 @@ export interface MapperContext {
     | "refund-note"
     | "self-billed-invoice"
     | "self-billed-credit-note"
-    | "self-billed-debit-note";
+    | "self-billed-debit-note"
+    | "self-billed-refund-note";
   version?: "1.0" | "1.1";
   format?: "JSON" | "XML";
   billingReferenceId?: string;
@@ -57,6 +58,13 @@ export interface MapperContext {
 const COUNTRY_MY = "MYS";
 const CURRENCY_DEFAULT = "MYR";
 
+/**
+ * MyInvois e-Invoice document type codes (per
+ * https://sdk.myinvois.hasil.gov.my/codes/e-invoice-types/).
+ * 01 Invoice / 02 Credit Note / 03 Debit Note / 04 Refund Note /
+ * 11 Self-billed Invoice / 12 Self-billed Credit Note /
+ * 13 Self-billed Debit Note / 14 Self-billed Refund Note
+ */
 const DOCUMENT_TYPE_CODE: Record<NonNullable<MapperContext["documentType"]>, string> = {
   "invoice": "01",
   "credit-note": "02",
@@ -65,7 +73,55 @@ const DOCUMENT_TYPE_CODE: Record<NonNullable<MapperContext["documentType"]>, str
   "self-billed-invoice": "11",
   "self-billed-credit-note": "12",
   "self-billed-debit-note": "13",
+  "self-billed-refund-note": "14",
 };
+
+/**
+ * MyInvois state codes per ISO-3166-2:MY
+ * (https://sdk.myinvois.hasil.gov.my/codes/state-codes/).
+ * 17 = Not Applicable - used when the supplier has no fixed
+ * place of business (e.g. e-commerce) or the state is unknown.
+ */
+const MALAYSIAN_STATE_CODES: Record<string, string> = {
+  johor: "01",
+  kedah: "02",
+  kelantan: "03",
+  melaka: "04",
+  malacca: "04",
+  "negeri sembilan": "05",
+  pahang: "06",
+  "pulau pinang": "07",
+  penang: "07",
+  perak: "08",
+  perlis: "09",
+  selangor: "10",
+  terengganu: "11",
+  sabah: "12",
+  sarawak: "13",
+  "wilayah persekutuan kuala lumpur": "14",
+  "kuala lumpur": "14",
+  "wilayah persekutuan labuan": "15",
+  labuan: "15",
+  "wilayah persekutuan putrajaya": "16",
+  putrajaya: "16",
+};
+
+/**
+ * Look up the MyInvois state code from either an existing 2-digit
+ * code or a free-form state name. Falls back to "17" (Not Applicable).
+ */
+export function toStateCode(input: string | null | undefined): string {
+  if (!input) return "17";
+  const trimmed = input.trim();
+  if (/^(0[1-9]|1[0-7])$/.test(trimmed)) return trimmed;
+  const lc = trimmed.toLowerCase();
+  if (MALAYSIAN_STATE_CODES[lc]) return MALAYSIAN_STATE_CODES[lc];
+  // Best-effort: match by prefix
+  for (const [name, code] of Object.entries(MALAYSIAN_STATE_CODES)) {
+    if (lc.startsWith(name) || name.startsWith(lc)) return code;
+  }
+  return "17";
+}
 
 export function buildUblInvoice(ctx: MapperContext): UblDocument {
   const v = ctx.version ?? "1.1";
@@ -98,12 +154,18 @@ export function buildUblInvoice(ctx: MapperContext): UblDocument {
   (document as Record<string, unknown>).InvoiceLine = ctx.invoice.lines.map((l) =>
     buildLine(l, ctx.taxCodes, currency),
   );
+
+  // Aggregate monetary totals
+  const allowanceTotal = ctx.invoice.lines.reduce(
+    (acc, l) => acc + Number(l.discount ?? 0),
+    0,
+  );
   (document as Record<string, unknown>).LegalMonetaryTotal = [
     {
       LineExtensionAmount: [{ _: toString(ctx.invoice.subtotal), currencyID: currency }],
       TaxExclusiveAmount: [{ _: toString(ctx.invoice.subtotal), currencyID: currency }],
       TaxInclusiveAmount: [{ _: toString(ctx.invoice.total), currencyID: currency }],
-      AllowanceTotalAmount: [{ _: "0.00", currencyID: currency }],
+      AllowanceTotalAmount: [{ _: toString(allowanceTotal), currencyID: currency }],
       ChargeTotalAmount: [{ _: "0.00", currencyID: currency }],
       PayableAmount: [{ _: toString(ctx.invoice.total), currencyID: currency }],
     },
@@ -127,7 +189,7 @@ function buildSupplier(s: MapperContext["supplier"]): UblDocument {
   const addr: UblDocument = {
     CityName: [{ _: s.city ?? "NA" }],
     PostalZone: [{ _: s.postalCode ?? "00000" }],
-    CountrySubentityCode: [{ _: "17" }],
+    CountrySubentityCode: [{ _: toStateCode(s.state) }],
     Country: [{ IdentificationCode: [{ _: s.country ?? COUNTRY_MY }] }],
   };
   if (s.addressLine1) (addr as Record<string, unknown>).Street = [{ _: s.addressLine1 }];
@@ -176,7 +238,7 @@ function buildCustomer(c: Customer): UblDocument {
   const addr: UblDocument = {
     CityName: [{ _: c.city ?? "NA" }],
     PostalZone: [{ _: c.postalCode ?? "00000" }],
-    CountrySubentityCode: [{ _: c.state ?? "17" }],
+    CountrySubentityCode: [{ _: toStateCode(c.state) }],
     Country: [{ IdentificationCode: [{ _: c.country ?? COUNTRY_MY }] }],
   };
   if (c.addressLine1) (addr as Record<string, unknown>).Street = [{ _: c.addressLine1 }];

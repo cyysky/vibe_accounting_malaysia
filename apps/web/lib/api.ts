@@ -441,18 +441,26 @@ class ApiClient {
     return this.request<JournalEntry>('POST', '/gl/journals', input);
   }
 
-  trialBalance(): Promise<Array<{ account: Account; debit: number; credit: number }>> {
-    return this.request('GET', '/gl/trial-balance');
+  reverseJournal(id: string, reason?: string): Promise<JournalEntry> {
+    return this.request<JournalEntry>('POST', `gl/journals/${id}/reverse`, { reason });
   }
 
-  // --- AR ---
+  trialBalance(asOf?: string): Promise<Array<{ account: Account; debit: number; credit: number }>> {
+    return this.request('GET', '/gl/trial-balance', undefined, asOf ? { asOf } : undefined);
+  }
+
+  closeFiscalYear(id: string): Promise<unknown> {
+    return this.request('POST', `/gl/fiscal-years/${id}/close`);
+  }
+
+  reopenFiscalYear(id: string): Promise<unknown> {
+    return this.request('POST', `/gl/fiscal-years/${id}/reopen`);
+  }
+
   customers(): Promise<Customer[]> {
     return this.request<Customer[]>('GET', '/ar/customers');
   }
 
-  getCustomer(id: string): Promise<Customer> {
-    return this.request<Customer>('GET', `/ar/customers/${id}`);
-  }
 
   createCustomer(input: Partial<Customer>): Promise<Customer> {
     return this.request<Customer>('POST', '/ar/customers', input);

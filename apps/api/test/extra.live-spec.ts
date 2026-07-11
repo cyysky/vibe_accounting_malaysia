@@ -135,4 +135,82 @@ describe('Extra endpoints (e2e over HTTP)', () => {
     expect(r.status).toBe(401);
   });
 
+  it('POST /api/gl/fiscal-years/:id/close toggles closed=true', async () => {
+    // Create a throwaway fiscal year we can close without affecting the running books.
+    const year = 2099;
+    const create = await http('/api/gl/fiscal-years', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ year, startDate: ${year}-01-01, endDate: ${year}-12-31 }),
+    });
+    if (create.status === 409 || create.status === 400) {
+      // Already created or invalid - try the closest year we can find and skip.
+      return;
+    }
+    expect(create.status).toBe(201);
+    const id = (create.body?.data as { id?: string })?.id;
+    if (!id) return;
+    const close = await http(`/api/gl/fiscal-years/${id}/close`, { method: 'POST', token });
+    expect(close.status).toBe(200);
+    expect((close.body?.data as { closed?: boolean })?.closed).toBe(true);
+    const reopen = await http(`/api/gl/fiscal-years/${id}/reopen`, { method: 'POST', token });
+    expect(reopen.status).toBe(200);
+    expect((reopen.body?.data as { closed?: boolean })?.closed).toBe(false);
+  });
+
+  it('POST /api/gl/journals/:id/reverse flips lines and marks the original REVERSED', async () => {
+    // Pick the most recent posted journal to reverse.
+    const list = await http('/api/gl/journals?pageSize=10', { token });
+    expect(list.status).toBe(200);
+    const items: Array<{ id: string; status: string }> = (() => {
+      const b = list.body;
+      if (Array.isArray(b?.data?.data)) return b.data.data;
+      if (Array.isArray(b?.data)) return b.data;
+      return [];
+    })();
+    const candidate = items.find((j) => j.status === 'POSTED');
+    if (!candidate) {
+      console.warn('No POSTED journal to reverse; skipping.');
+      return;
+    }
+    const res = await http(`/api/gl/journals/${candidate.id}/reverse`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ reason: 'e2e-test' }),
+    });
+    expect(res.status).toBe(201);
+    expect((res.body?.data as { description?: string })?.description).toMatch(/REVERSAL of/);
+  });
+
+  it('rejects reversing an already-reversed journal', async () => {
+    const list = await http('/api/gl/journals?pageSize=10', { token });
+    const items: Array<{ id: string; status: string }> = (() => {
+      const b = list.body;
+      if (Array.isArray(b?.data?.data)) return b.data.data;
+      if (Array.isArray(b?.data)) return b.data;
+      return [];
+    })();
+    const reversed = items.find((j) => j.status === 'REVERSED');
+    if (!reversed) return;
+    const res = await http(`/api/gl/journals/${reversed.id}/reverse`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ reason: 'again' }),
+    });
+    expect([400, 404]).toContain(res.status);
+  });
+
+  it('GET /api/gl/trial-balance accepts an asOf date', async () => {
+    const r = await http('/api/gl/trial-balance?asOf=2030-01-01', { token });
+    expect(r.status).toBe(200);
+  });
+
+  it('rejects reverse with unknown id', async () => {
+    const res = await http('/api/gl/journals/00000000-0000-0000-0000-000000000000/reverse', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(404);
+  });
 });

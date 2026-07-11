@@ -145,6 +145,57 @@ export class GlService {
     return j as unknown as Record<string, unknown>;
   }
 
+  /**
+   * Reverse a posted journal by flipping every line's debit & credit and
+   * setting the journal's status to REVERSED.  The reversal entry keeps
+   * the same fiscal year and date so the trial balance still balances.
+   */
+  async reverseJournal(bookId: string, id: string, reason?: string) {
+    const j = await this.prisma.journalEntry.findUnique({
+      where: { id },
+      include: { lines: true },
+    });
+    if (!j || j.accountBookId !== bookId) {
+      throw new NotFoundException(`Journal ${id} not found in this account book`);
+    }
+    if (j.status === 'REVERSED') {
+      throw new BadRequestException(`Journal ${id} is already reversed`);
+    }
+    if (j.status !== 'POSTED') {
+      throw new BadRequestException(`Only POSTED journals can be reversed (status = ${j.status})`);
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const seq = await this.seq.next(bookId, 'JV');
+      const reversed = await tx.journalEntry.create({
+        data: {
+          accountBookId: bookId,
+          number: seq,
+          date: j.date,
+          description: 'REVERSAL of ' + j.number + (reason ? ' - ' + reason : ''),
+          reference: j.reference ?? undefined,
+          status: 'POSTED',
+          totalDebit: j.totalCredit ?? 0,
+          totalCredit: j.totalDebit ?? 0,
+          lines: {
+            create: j.lines.map((l) => ({
+              accountId: l.accountId,
+              description: l.description ?? undefined,
+              debit: new Prisma.Decimal(l.credit),   // flip
+              credit: new Prisma.Decimal(l.debit),    // flip
+              lineNo: (l as any).lineNo ?? 0,
+            })),
+          },
+        },
+        include: { lines: true },
+      });
+      await tx.journalEntry.update({
+        where: { id: j.id },
+        data: { status: 'REVERSED' },
+      });
+      return reversed;
+    });
+  }
+
   // --- Tax codes -----------------------------------------------------------
   listTaxCodes(bookId: string): Promise<Array<Record<string, unknown>>> {
     return this.prisma.taxCode.findMany({
@@ -222,6 +273,12 @@ export class GlService {
     return (await this.prisma.fiscalYear.update({
       where: { id },
       data: { closed: true },
+    })) as unknown as Record<string, unknown>;
+  }
+  async reopenFiscalYear(id: string): Promise<Record<string, unknown>> {
+    return (await this.prisma.fiscalYear.update({
+      where: { id },
+      data: { closed: false },
     })) as unknown as Record<string, unknown>;
   }
   async deleteFiscalYear(id: string): Promise<void> {

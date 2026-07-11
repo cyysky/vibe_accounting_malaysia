@@ -151,7 +151,7 @@ aggregation, the mapper and config module also expose:
 ## Tests
 
 - **Unit tests** (
-px jest in pps/api) — 116 tests across 20 suites
+px jest in pps/api) — 124 tests across 20 suites
   covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
   reports / credit-notes / auth services plus the UBL mapper, UBL validator
   and MyInvois HTTP client.

@@ -1,4 +1,4 @@
-import { buildUblInvoice, toStateCode } from "./invoice-v1.1.mapper";
+import { buildUblInvoice, toCountryCode, toStateCode } from "./invoice-v1.1.mapper";
 import type { Customer, CustomerInvoice } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 
@@ -43,6 +43,21 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
       expect(toStateCode(undefined)).toBe("17");
       expect(toStateCode("Atlantis")).toBe("17");
     });
+  });
+
+  it("emits ISO alpha-3 Country code from free-form country name", () => {
+    const doc = buildUblInvoice({
+      invoice: { ...invoice, lines: [] },
+      customer: { ...baseCustomer, country: "SG" },
+      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co", country: "Malaysia" },
+      taxCodes: new Map(),
+      documentType: "invoice",
+    });
+    const root = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
+    const supplierAddr = ((root.AccountingSupplierParty as Array<Record<string, unknown>>)[0].Party as Array<Record<string, unknown>>)[0].PostalAddress as Array<Record<string, unknown>>;
+    const customerAddr = ((root.AccountingCustomerParty as Array<Record<string, unknown>>)[0].Party as Array<Record<string, unknown>>)[0].PostalAddress as Array<Record<string, unknown>>;
+    expect(((supplierAddr[0].Country as Array<Record<string, unknown>>)[0].IdentificationCode as Array<{ _: string }>)[0]._).toBe("MYS");
+    expect(((customerAddr[0].Country as Array<Record<string, unknown>>)[0].IdentificationCode as Array<{ _: string }>)[0]._).toBe("SGP");
   });
 
   it("emits self-billed-refund-note document type code 14", () => {
@@ -101,4 +116,36 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
     const monetary = (inv.LegalMonetaryTotal as Array<Record<string, unknown>>)[0];
     expect((monetary.AllowanceTotalAmount as Array<{ _: string }>)[0]._).toBe("8.00");
   });
+
+  describe("toCountryCode", () => {
+    it("passes through 3-letter ISO codes", () => {
+      expect(toCountryCode("MYS")).toBe("MYS");
+      expect(toCountryCode("SGP")).toBe("SGP");
+      expect(toCountryCode("USA")).toBe("USA");
+    });
+    it("uppercases 3-letter codes", () => {
+      expect(toCountryCode("mys")).toBe("MYS");
+    });
+    it("maps common free-form names", () => {
+      expect(toCountryCode("Malaysia")).toBe("MYS");
+      expect(toCountryCode("Singapore")).toBe("SGP");
+      expect(toCountryCode("United States")).toBe("USA");
+      expect(toCountryCode("South Korea")).toBe("KOR");
+      expect(toCountryCode("Hong Kong")).toBe("HKG");
+      expect(toCountryCode("Brunei")).toBe("BRN");
+    });
+    it("maps 2-letter ISO alpha-2 codes for common countries", () => {
+      expect(toCountryCode("MY")).toBe("MYS");
+      expect(toCountryCode("SG")).toBe("SGP");
+      expect(toCountryCode("ID")).toBe("IDN");
+      expect(toCountryCode("US")).toBe("USA");
+    });
+    it("falls back to MYS for null/empty/unknown", () => {
+      expect(toCountryCode(null)).toBe("MYS");
+      expect(toCountryCode(undefined)).toBe("MYS");
+      expect(toCountryCode("")).toBe("MYS");
+      expect(toCountryCode("Atlantis")).toBe("MYS");
+    });
+  });
+
 });

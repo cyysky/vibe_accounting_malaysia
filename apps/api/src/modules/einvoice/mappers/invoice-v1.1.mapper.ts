@@ -110,6 +110,69 @@ const MALAYSIAN_STATE_CODES: Record<string, string> = {
  * Look up the MyInvois state code from either an existing 2-digit
  * code or a free-form state name. Falls back to "17" (Not Applicable).
  */
+/**
+ * ISO-3166-1 alpha-3 country codes for the most common places of
+ * business our users encounter. Falls back to "MYS" for unknown
+ * free-form input (per MyInvois rule: when in doubt, assume Malaysia).
+ */
+const COUNTRY_CODES: Record<string, string> = {
+  malaysia: "MYS",
+  my: "MYS",
+  singapore: "SGP",
+  sg: "SGP",
+  indonesia: "IDN",
+  id: "IDN",
+  thailand: "THA",
+  th: "THA",
+  "united states": "USA",
+  "united states of america": "USA",
+  usa: "USA",
+  us: "USA",
+  "united kingdom": "GBR",
+  uk: "GBR",
+  "great britain": "GBR",
+  australia: "AUS",
+  au: "AUS",
+  china: "CHN",
+  cn: "CHN",
+  hongkong: "HKG",
+  "hong kong": "HKG",
+  hk: "HKG",
+  japan: "JPN",
+  jp: "JPN",
+  "korea, republic of": "KOR",
+  "south korea": "KOR",
+  kr: "KOR",
+  "korea, democratic people's republic of": "PRK",
+  "north korea": "PRK",
+  philippines: "PHL",
+  ph: "PHL",
+  vietnam: "VNM",
+  vn: "VNM",
+  india: "IND",
+  in: "IND",
+  brunei: "BRN",
+  bn: "BRN",
+};
+
+/**
+ * Resolve a free-form country name (or 2- or 3-letter code) to the
+ * ISO-3166-1 alpha-3 code required by the MyInvois Country /
+ * CountryIdentificationCode field.
+ */
+export function toCountryCode(input: string | null | undefined): string {
+  if (!input) return COUNTRY_MY;
+  const trimmed = input.trim();
+  if (/^[A-Z]{3}$/.test(trimmed)) return trimmed.toUpperCase();
+  const lc = trimmed.toLowerCase();
+  if (COUNTRY_CODES[lc]) return COUNTRY_CODES[lc];
+  // Best-effort prefix match (e.g. "Malaysia, Selangor" -> "MYS")
+  for (const [name, code] of Object.entries(COUNTRY_CODES)) {
+    if (lc.startsWith(name)) return code;
+  }
+  return COUNTRY_MY;
+}
+
 export function toStateCode(input: string | null | undefined): string {
   if (!input) return "17";
   const trimmed = input.trim();
@@ -190,7 +253,7 @@ function buildSupplier(s: MapperContext["supplier"]): UblDocument {
     CityName: [{ _: s.city ?? "NA" }],
     PostalZone: [{ _: s.postalCode ?? "00000" }],
     CountrySubentityCode: [{ _: toStateCode(s.state) }],
-    Country: [{ IdentificationCode: [{ _: s.country ?? COUNTRY_MY }] }],
+    Country: [{ IdentificationCode: [{ _: toCountryCode(s.country) }] }],
   };
   if (s.addressLine1) (addr as Record<string, unknown>).Street = [{ _: s.addressLine1 }];
   if (s.addressLine2) {
@@ -239,7 +302,7 @@ function buildCustomer(c: Customer): UblDocument {
     CityName: [{ _: c.city ?? "NA" }],
     PostalZone: [{ _: c.postalCode ?? "00000" }],
     CountrySubentityCode: [{ _: toStateCode(c.state) }],
-    Country: [{ IdentificationCode: [{ _: c.country ?? COUNTRY_MY }] }],
+    Country: [{ IdentificationCode: [{ _: toCountryCode(c.country) }] }],
   };
   if (c.addressLine1) (addr as Record<string, unknown>).Street = [{ _: c.addressLine1 }];
   if (c.addressLine2) {

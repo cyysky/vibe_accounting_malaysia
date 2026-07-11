@@ -185,6 +185,10 @@ Per the [MyInvois PaymentMeans list](https://sdk.myinvois.hasil.gov.my/codes/pay
 
 Use the helper `paymentModeDisplayName(code)` to render the human-readable label in the UI.
 
+## Country codes
+
+The mapper exposes a `toCountryCode(input)` helper that resolves free-form country names (`"Malaysia"`, `"SG"`, `"United States"`, ...) to the ISO-3166-1 alpha-3 codes MyInvois requires in `PostalAddress/Country/IdentificationCode`. Covers all ASEAN neighbours plus major trading partners (USA, UK, AU, CN, HK, JP, KR, PH, VN, IN, BN). Falls back to `MYS` for unknown / empty input.
+
 ## Pre-submission validation
 
 Before every submission we run a 100% in-process UBL 2.1 v1.1 conformance

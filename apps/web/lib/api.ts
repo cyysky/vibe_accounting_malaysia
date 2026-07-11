@@ -518,6 +518,10 @@ class ApiClient {
   supplierInvoices(page = 1, pageSize = 50, supplierId?: string): Promise<PaginatedResponse<SupplierInvoice>> {
     return this.request<PaginatedResponse<SupplierInvoice>>('GET', '/ap/invoices', undefined, { page, pageSize, supplierId });
   }
+  getSupplierInvoice(id: string): Promise<SupplierInvoice> {
+    return this.request<SupplierInvoice>('GET', `/ap/invoices/${id}`);
+  }
+
 
   // --- Stock ---
   items(): Promise<Item[]> {

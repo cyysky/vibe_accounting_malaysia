@@ -141,7 +141,7 @@ describe('Extra endpoints (e2e over HTTP)', () => {
     const create = await http('/api/gl/fiscal-years', {
       method: 'POST',
       token,
-      body: JSON.stringify({ year, startDate: ${year}-01-01, endDate: ${year}-12-31 }),
+      body: JSON.stringify({ year, startDate: `${year}-01-01`, endDate: `${year}-12-31` }),
     });
     if (create.status === 409 || create.status === 400) {
       // Already created or invalid - try the closest year we can find and skip.

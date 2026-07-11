@@ -221,11 +221,6 @@ export default function DashboardPage() {
             <Card title="Pending" value={String(d.einvoicePending ?? 0)} accent="warn" hint="Awaiting MyInvois validation" />
             <Card title="Valid" value={String(d.einvoiceValid ?? 0)} accent="good" hint="Successfully validated" />
           </div>
-          <div className="mt-3 rounded-lg border bg-white p-3 text-sm">
-            <Link href="/audit-log" className="flex items-center gap-2 text-brand-700 hover:underline">
-              <Activity className="h-4 w-4" /> View recent activity
-            </Link>
-          </div>
         </section>
 
         <section>

@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileText } from 'lucide-react';
 import { api, type Supplier } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
 import { DataTable } from '../../components/ui/DataTable';
@@ -145,7 +145,7 @@ export default function PayablesPage() {
           rowKey={(i) => i.id}
           empty="No bills yet."
           columns={[
-            { key: 'number', header: 'Number', render: (i) => <span className="font-mono text-xs">{i.number}</span> },
+            { key: 'number', header: 'Number', render: (i) => <a href={`/payables/${i.id}`} className="flex items-center gap-1 font-mono text-xs text-brand-700 hover:underline"><FileText className="h-3.5 w-3.5" /> {i.number}</a> },
             { key: 'supplier', header: 'Supplier', render: (i) => i.supplierName },
             { key: 'date', header: 'Date', render: (i) => i.date },
             { key: 'due', header: 'Due', render: (i) => i.dueDate },

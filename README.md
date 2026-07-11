@@ -153,8 +153,9 @@ aggregation, the mapper and config module also expose:
 - **Unit tests** (
 px jest in pps/api) — 124 tests across 20 suites
   covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
-  reports / credit-notes / auth services plus the UBL mapper, UBL validator
-  and MyInvois HTTP client.
+  reports / credit-notes / auth services plus the UBL mapper, UBL validator,
+  MyInvois HTTP client, payments (customer + supplier), debit notes,
+  sales orders, purchase orders, AP service, audit log (+ CSV escape rules).
 - **Live e2e tests** (
 px jest --config ./test/jest-e2e.json) — run
   against a running stack; require the seeded admin user.
@@ -165,7 +166,7 @@ px jest --config ./test/jest-e2e.json) — run
 ## Tests
 
 - **Unit tests** (
-px jest in pps/api) — 95 tests across 18 suites
+px jest in pps/api) — 124 tests across 20 suites
   covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
   reports / credit-notes / auth services plus the UBL mapper, UBL validator
   and MyInvois HTTP client.

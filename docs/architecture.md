@@ -163,7 +163,7 @@ shortcut buttons back to the parent workflow:
 
 ## Testing
 
-20 Jest test suites / 116 unit tests covering: GL (service + posting),
+20 Jest test suites / 124 unit tests covering: GL (service + posting),
 AR, AP, e-invoice mapper (basic + extras), UBL 2.1 validator (basic +
 extras), MyInvois HTTP client, recurring, stock, bank accounts, payments
 (customer + supplier), credit notes, debit notes, sales orders,

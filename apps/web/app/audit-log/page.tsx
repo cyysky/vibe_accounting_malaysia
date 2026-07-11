@@ -8,7 +8,7 @@ import { api } from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 
-const ENTITIES = ["", "CustomerInvoice", "SupplierInvoice", "JournalEntry", "CustomerPayment", "SupplierPayment", "EinvoiceSubmission", "Customer", "Supplier", "Item"];
+const ENTITIES = ["", "CustomerInvoice", "SupplierInvoice", "JournalEntry", "CustomerPayment", "SupplierPayment", "EinvoiceSubmission", "Customer", "Supplier", "Item", "User"];
 
 function entityHref(entity: string, entityId: string): string | null {
   switch (entity) {
@@ -31,6 +31,8 @@ function entityHref(entity: string, entityId: string): string | null {
       return entityId ? "/dashboard/journal/" + entityId : "/dashboard/journal";
     case "Item":
       return "/stock/" + entityId;
+    case "User":
+      return "/settings/users/" + entityId;
     default:
       return null;
   }

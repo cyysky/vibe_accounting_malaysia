@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -85,6 +85,14 @@ export class AuthController {
   @Get('users')
   listUsers(): Promise<AuthUser[]> {
     return this.auth.listUsers();
+  }
+
+  @ApiOperation({ summary: 'Get a single user by id' })
+  @ApiResponse({ status: 200, description: 'User found.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  @Get('users/:id')
+  getUser(@Param('id') id: string): Promise<AuthUser> {
+    return this.auth.getUser(id);
   }
 
   @ApiBearerAuth()

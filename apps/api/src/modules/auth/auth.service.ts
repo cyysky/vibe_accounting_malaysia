@@ -50,6 +50,12 @@ export class AuthService {
     return users.map((u) => this.toAuthUser(u));
   }
 
+  async getUser(id: string): Promise<AuthUser> {
+    const u = await this.prisma.user.findUnique({ where: { id } });
+    if (!u) throw new NotFoundException(`User ${id} not found`);
+    return this.toAuthUser(u);
+  }
+
   async createUser(input: { email: string; name: string; password: string; role: Role; accountBookId?: string }): Promise<AuthUser> {
     const existing = await this.prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
     if (existing) throw new ConflictException('A user with that email already exists');
@@ -91,6 +97,10 @@ export class AuthService {
     name: string;
     role: Role;
     accountBookId: string | null;
+    active: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    lastLoginAt?: Date | null;
   }): AuthUser {
     return {
       id: u.id,
@@ -98,6 +108,10 @@ export class AuthService {
       name: u.name,
       role: u.role,
       accountBookId: u.accountBookId ?? undefined,
-    };
+      active: u.active,
+      createdAt: u.createdAt.toISOString(),
+      updatedAt: u.updatedAt.toISOString(),
+      lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
+    } as AuthUser;
   }
 }

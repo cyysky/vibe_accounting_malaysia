@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { Pencil, Plus, Trash2, Users, X } from "lucide-react";
 import { api } from "../../../lib/api";
 import type { AuthUser } from "../../../lib/api";
@@ -133,7 +134,7 @@ export default function UsersPage() {
               header: "Name",
               render: (u) => (
                 <div>
-                  <div className="font-medium text-slate-800">{u.name}</div>
+                  <Link href={"/settings/users/" + u.id} className="font-medium text-blue-600 hover:underline">{u.name}</Link>
                   <div className="text-xs text-slate-500">{u.email}</div>
                 </div>
               ),

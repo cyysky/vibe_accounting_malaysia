@@ -8,6 +8,10 @@ export interface AuthUser {
   name: string;
   role: Role;
   accountBookId?: ID;
+  active?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  lastLoginAt?: string | null;
 }
 
 export interface LoginRequest {

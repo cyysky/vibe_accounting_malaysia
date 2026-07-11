@@ -276,13 +276,8 @@ export interface GLSummary {
   closing: number;
 }
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  role: 'OWNER' | 'ADMIN' | 'ACCOUNTANT' | 'CLERK' | 'VIEWER';
-  accountBookId?: string;
-}
+import type { AuthUser } from '@account/shared';
+export type { AuthUser };
 
 class ApiClient {
   private token: string | null = null;
@@ -369,6 +364,9 @@ class ApiClient {
 
   listUsers(): Promise<AuthUser[]> {
     return this.request<AuthUser[]>('GET', '/auth/users');
+  }
+  getUserById(id: string): Promise<AuthUser> {
+    return this.request<AuthUser>('GET', `/auth/users/${id}`);
   }
 
   createUser(input: { email: string; name: string; password: string; role: AuthUser['role']; accountBookId?: string }): Promise<AuthUser> {

@@ -441,6 +441,10 @@ class ApiClient {
     return this.request<JournalEntry>('POST', '/gl/journals', input);
   }
 
+  getJournal(id: string): Promise<JournalEntry> {
+    return this.request<JournalEntry>('GET', `gl/journals/${id}`);
+  }
+
   reverseJournal(id: string, reason?: string): Promise<JournalEntry> {
     return this.request<JournalEntry>('POST', `gl/journals/${id}/reverse`, { reason });
   }
@@ -781,8 +785,8 @@ class ApiClient {
   }
 
   // --- Stock Movements ---
-  stockMovements(): Promise<StockMovement[]> {
-    return this.request<StockMovement[]>('GET', '/stock/movements');
+  stockMovements(itemId?: string): Promise<StockMovement[]> {
+    return this.request<StockMovement[]>('GET', '/stock/movements', undefined, itemId ? { itemId } : undefined);
   }
   createStockMovement(input: { itemId: string; type: string; quantity: number; date: string; unitCost?: number; reference?: string; notes?: string }): Promise<StockMovement> {
     return this.request<StockMovement>('POST', '/stock/movements', input);

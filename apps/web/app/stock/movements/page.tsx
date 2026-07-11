@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { ArrowDown, ArrowUp, Plus, Package } from "lucide-react";
 import { api } from "../../../lib/api";
 import type { Item, StockMovement } from "../../../lib/api";
@@ -131,7 +132,7 @@ export default function StockMovementsPage() {
         }
         columns={[
           { key: "date", header: "Date", render: (r) => new Date(r.createdAt).toLocaleDateString("en-MY") },
-          { key: "item", header: "Item", render: (r) => r.item ? `${r.item.code} — ${r.item.name}` : "—" },
+          { key: "item", header: "Item", render: (r) => r.item ? <Link href={"/stock/" + r.item.id} className="text-blue-600 hover:underline">{r.item.code} — {r.item.name}</Link> : "—" },
           { key: "type", header: "Type", render: (r) => <StatusBadge status={r.type} /> },
           { key: "quantity", header: "Qty", align: "right", render: (r) => <span className={`tabular-nums ${Number(r.quantity) > 0 ? "text-emerald-700" : "text-rose-700"}`}>{Number(r.quantity).toLocaleString("en-MY", { maximumFractionDigits: 2 })}</span> },
           { key: "unitCost", header: "Unit cost", align: "right", render: (r) => fmt(Number(r.unitCost)) },

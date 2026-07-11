@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Link from 'next/link';
 import { Plus, X, ScrollText, Undo2 } from 'lucide-react';
 import { api, type Account } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
@@ -112,7 +113,7 @@ export default function JournalPage() {
         rowKey={(j) => j.id}
         empty="No journal entries yet."
         columns={[
-          { key: 'number', header: 'Number', render: (j) => <span className="font-mono text-xs">{j.number}</span> },
+          { key: 'number', header: 'Number', render: (j) => <Link href={'/dashboard/journal/' + j.id} className="font-mono text-xs text-blue-600 hover:underline">{j.number}</Link> },
           { key: 'date', header: 'Date', render: (j) => j.date },
           { key: 'description', header: 'Description', render: (j) => j.description },
           {

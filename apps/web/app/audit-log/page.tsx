@@ -28,7 +28,9 @@ function entityHref(entity: string, entityId: string): string | null {
     case "Supplier":
       return "/payables/suppliers/" + entityId;
     case "JournalEntry":
-      return "/dashboard/journal";
+      return entityId ? "/dashboard/journal/" + entityId : "/dashboard/journal";
+    case "Item":
+      return "/stock/" + entityId;
     default:
       return null;
   }

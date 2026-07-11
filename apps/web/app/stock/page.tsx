@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Link from 'next/link';
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { api, type Item } from '../../lib/api';
 import { Button } from '../../components/ui/Button';
@@ -104,7 +105,7 @@ export default function StockPage() {
         empty="No items yet."
         columns={[
           { key: 'code', header: 'Code', render: (i) => <span className="font-mono text-xs">{i.code}</span> },
-          { key: 'name', header: 'Name', render: (i) => <span className="font-medium">{i.name}</span> },
+          { key: 'name', header: 'Name', render: (i) => <Link href={'/stock/' + i.id} className="font-medium text-blue-600 hover:underline">{i.name}</Link> },
           { key: 'uom', header: 'UOM', render: (i) => i.uom },
           { key: 'cost', header: 'Cost', align: 'right', render: (i) => fmt(i.cost) },
           { key: 'price', header: 'Price', align: 'right', render: (i) => fmt(i.price) },

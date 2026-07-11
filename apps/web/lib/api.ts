@@ -943,6 +943,7 @@ export interface BankReconciliation {
   difference: number;
   lines: Array<{
     id: string;
+    journalId: string;
     date: string;
     journalNumber: string;
     description: string;

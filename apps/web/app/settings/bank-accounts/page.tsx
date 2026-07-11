@@ -71,7 +71,7 @@ export default function BankAccountsPage() {
           </div>
         }
         columns={[
-          { key: "name", header: "Name", render: (r) => <span className="font-medium">{r.name}</span> },
+          { key: "name", header: "Name", render: (r) => <Link href={"/reports/bank-reconciliation/" + r.id} className="font-medium text-blue-600 hover:underline">{r.name}</Link> },
           { key: "bankName", header: "Bank" },
           { key: "accountNumber", header: "Account #" },
           { key: "glAccountCode", header: "GL code" },
@@ -82,7 +82,7 @@ export default function BankAccountsPage() {
             key: "actions", header: "", align: "right",
             render: (r) => (
               <div className="flex items-center justify-end gap-1">
-                <Link href={`/reports/bank-reconciliation?bankAccountId=${r.id}`} title="Bank reconciliation">
+                <Link href={`/reports/bank-reconciliation/${r.id}`} title="Bank reconciliation">
                   <Button size="sm" variant="ghost"><ArrowRightLeft className="h-4 w-4 text-brand-700" /> Reconcile</Button>
                 </Link>
                 <button onClick={() => confirm(`Delete ${r.name}?`) && remove.mutate(r.id)} className="text-rose-500 hover:text-rose-700">

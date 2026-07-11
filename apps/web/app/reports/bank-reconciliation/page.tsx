@@ -2,30 +2,22 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Landmark, AlertCircle, CheckCircle2, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Landmark, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { api } from "../../../lib/api";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
+import { DataTable } from "../../../components/ui/DataTable";
 
-const fmt = (n: number | undefined) =>
-  (Number(n ?? 0)).toLocaleString("en-MY", { style: "currency", currency: "MYR" });
+const fmt = (n: number | undefined) => (Number(n ?? 0)).toLocaleString("en-MY", { style: "currency", currency: "MYR" });
 
-export default function BankReconciliationPage() {
+export default function BankReconciliationListPage() {
   const banks = useQuery({ queryKey: ["bankAccounts"], queryFn: () => api.bankAccounts() });
-  const sp = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-  const presetId = sp?.get("bankAccountId") ?? null;
-  const first = banks.data?.[0];
-  const [selectedId, setSelectedId] = useState<string | null>(presetId);
-  const bankId = selectedId ?? first?.id ?? null;
+  const [filter, setFilter] = useState("");
 
-  const rec = useQuery({
-    queryKey: ["bankReconciliation", bankId],
-    queryFn: () => (bankId ? api.bankReconciliation(bankId) : Promise.resolve(null)),
-    enabled: !!bankId,
-  });
-
-  const data = rec.data;
-  const reconciled = data ? Math.abs(data.difference) < 0.01 : false;
+  const filtered = (banks.data ?? []).filter((b) =>
+    !filter || b.name.toLowerCase().includes(filter.toLowerCase()) || (b.bankName ?? "").toLowerCase().includes(filter.toLowerCase()),
+  );
 
   return (
     <div>
@@ -34,134 +26,56 @@ export default function BankReconciliationPage() {
         description="Compare your bank statement balance with the linked GL account."
         breadcrumbs={[{ label: "Reports" }, { label: "Bank Reconciliation" }]}
         actions={
-          <>
-            <select
-              className="rounded-md border px-3 py-2 text-sm"
-              value={bankId ?? ""}
-              onChange={(e) => setSelectedId(e.target.value)}
-            >
-              {(banks.data ?? []).map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.currency})
-                </option>
-              ))}
-              {(banks.data ?? []).length === 0 && <option value="">No bank accounts</option>}
-            </select>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm hover:bg-slate-50"
-              onClick={() => rec.refetch()}
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh
-            </button>
-          </>
+          <input
+            className="rounded-md border px-3 py-2 text-sm"
+            placeholder="Filter by name…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
         }
       />
 
-      {!bankId ? (
+      {(banks.data ?? []).length === 0 ? (
         <div className="rounded-lg border bg-white p-6 text-center text-sm text-slate-500">
           Create a bank account first under Settings &rarr; Bank Accounts.
         </div>
-      ) : rec.isLoading ? (
-        <p className="text-sm text-slate-500">Loading reconciliation…</p>
-      ) : !data ? (
-        <p className="text-sm text-rose-600">No data.</p>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <div className="rounded-lg border bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
-                <Landmark className="h-4 w-4 text-sky-600" /> Opening balance
-              </div>
-              <div className="mt-2 text-xl font-semibold tabular-nums">{fmt(data.openingBalance)}</div>
-              <div className="mt-1 text-xs text-slate-500">GL {data.glAccount?.code ?? "?"}</div>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm">
-              <div className="text-xs uppercase text-slate-500">GL ledger balance</div>
-              <div className="mt-2 text-xl font-semibold tabular-nums">{fmt(data.glBalance)}</div>
-              <div className="mt-1 text-xs text-slate-500">{data.lines.length} recent lines</div>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm">
-              <div className="text-xs uppercase text-slate-500">Statement balance</div>
-              <input
-                type="number"
-                step="0.01"
-                className="mt-2 w-full rounded border px-2 py-1 text-right text-lg font-semibold tabular-nums"
-                value={data.statementBalance}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (data) {
-                    (data as { statementBalance: number }).statementBalance = v;
-                    (data as { difference: number }).difference = data.glBalance - v;
-                  }
-                }}
-              />
-              <div className="mt-1 text-xs text-slate-500">Type your bank&apos;s closing balance.</div>
-            </div>
-            <div className="rounded-lg border bg-white p-4 shadow-sm">
-              <div className="text-xs uppercase text-slate-500">Difference</div>
-              <div className={`mt-2 text-xl font-semibold tabular-nums ${reconciled ? "text-emerald-700" : "text-rose-700"}`}>
-                {fmt(data.difference)}
-              </div>
-              <div className="mt-1">
-                {reconciled ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-emerald-700">
-                    <CheckCircle2 className="h-3 w-3" /> Reconciled
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs text-rose-700">
-                    <AlertCircle className="h-3 w-3" /> Out of balance
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <section className="mt-6">
-            <div className="mb-2 flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-slate-700">Recent GL activity</h2>
-              {data.glAccount && <StatusBadge status="POSTED" />}
-            </div>
-            <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-3 py-2">Date</th>
-                    <th className="px-3 py-2">Journal</th>
-                    <th className="px-3 py-2">Description</th>
-                    <th className="px-3 py-2 text-right">Debit</th>
-                    <th className="px-3 py-2 text-right">Credit</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {data.lines.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-3 py-6 text-center text-sm text-slate-500">
-                        No activity on this GL account yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    data.lines.map((l) => (
-                      <tr key={l.id} className="hover:bg-slate-50">
-                        <td className="px-3 py-2 font-mono text-xs">{l.date}</td>
-                        <td className="px-3 py-2 font-mono text-xs">{l.journalNumber}</td>
-                        <td className="px-3 py-2">{l.description}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmt(l.debit)}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{fmt(l.credit)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <p className="mt-4 text-xs text-slate-500">
-            Tip: When the difference is zero, your GL and bank statement agree. Investigate any
-            outstanding cheques, deposits in transit or bank fees to reconcile.
-          </p>
-        </>
+        <DataTable
+          data={filtered}
+          rowKey={(b) => b.id}
+          loading={banks.isLoading}
+          empty="No bank accounts match."
+          columns={[
+            {
+              key: "name",
+              header: "Account",
+              render: (b) => (
+                <Link href={"/reports/bank-reconciliation/" + b.id} className="font-medium text-blue-600 hover:underline">
+                  {b.name}
+                </Link>
+              ),
+            },
+            { key: "bank", header: "Bank", render: (b) => b.bankName ?? "—" },
+            { key: "no", header: "Account no.", render: (b) => <span className="font-mono text-xs">{b.accountNumber ?? "—"}</span> },
+            { key: "ccy", header: "CCY", render: (b) => b.currency },
+            { key: "status", header: "Status", render: (b) => <StatusBadge status={b.active ? "ACTIVE" : "INACTIVE"} /> },
+            {
+              key: "open",
+              header: "",
+              align: "right",
+              render: (b) => (
+                <Link href={"/reports/bank-reconciliation/" + b.id} className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                  Reconcile <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              ),
+            },
+          ]}
+        />
       )}
+
+      <p className="mt-4 text-xs text-slate-500">
+        Pick a bank account above to open its reconciliation view.
+      </p>
     </div>
   );
 }

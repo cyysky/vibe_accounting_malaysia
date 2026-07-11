@@ -177,7 +177,7 @@ export default function RecurringPage() {
           </div>
         }
         columns={[
-          { key: "name", header: "Template", render: (r) => <span className="font-medium">{r.name}</span> },
+          { key: "name", header: "Template", render: (r) => <a href={'/recurring/' + r.id} className="font-medium text-brand-700 hover:underline">{r.name}</a> },
           { key: "customer", header: "Customer", render: (r) => r.customer?.name ?? "-" },
           { key: "frequency", header: "Frequency", render: (r) => <StatusBadge status={r.frequency} /> },
           { key: "nextRun", header: "Next run" },

@@ -847,6 +847,9 @@ class ApiClient {
   recurringInvoices(): Promise<RecurringInvoice[]> {
     return this.request<RecurringInvoice[]>('GET', '/recurring');
   }
+  getRecurring(id: string): Promise<RecurringInvoice> {
+    return this.request<RecurringInvoice>('GET', '/recurring/' + id);
+  }
   createRecurring(input: Partial<RecurringInvoice> & { lines: RecurringInvoice['lines'] }): Promise<RecurringInvoice> {
     return this.request<RecurringInvoice>('POST', '/recurring', input);
   }

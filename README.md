@@ -70,6 +70,7 @@ exposes shortcut buttons back to the parent workflow:
 - **Payables** – bills at `/payables/[id]` with shortcuts for supplier
   payment and debit note.
 - **Sales orders** – `/sales/[id]` with shortcut to create invoice.
+- **Recurring templates** – `/recurring/[id]` with shortcut to run now, delete, and view upcoming due dates + activity.
 - **Purchase orders** – `/purchase/[id]` with shortcut to record bill.
 - **Dashboard** – the "Recent activity" feed links each entity name to its
   detail page using the `entityHref()` helper.
@@ -150,7 +151,7 @@ aggregation, the mapper and config module also expose:
 ## Tests
 
 - **Unit tests** (
-px jest in pps/api) — 95 tests across 18 suites
+px jest in pps/api) — 116 tests across 20 suites
   covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
   reports / credit-notes / auth services plus the UBL mapper, UBL validator
   and MyInvois HTTP client.

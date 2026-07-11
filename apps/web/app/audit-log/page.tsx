@@ -3,11 +3,36 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Download } from "lucide-react";
+import Link from "next/link";
 import { api } from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 
 const ENTITIES = ["", "CustomerInvoice", "SupplierInvoice", "JournalEntry", "CustomerPayment", "SupplierPayment", "EinvoiceSubmission", "Customer", "Supplier", "Item"];
+
+function entityHref(entity: string, entityId: string): string | null {
+  switch (entity) {
+    case "CustomerInvoice":
+    case "CreditNote":
+    case "RecurringInvoice":
+      return "/receivables/" + entityId;
+    case "SupplierInvoice":
+    case "DebitNote":
+      return "/payables/" + entityId;
+    case "SalesOrder":
+      return "/sales/" + entityId;
+    case "PurchaseOrder":
+      return "/purchase/" + entityId;
+    case "Customer":
+      return "/receivables/customers/" + entityId;
+    case "Supplier":
+      return "/payables/suppliers/" + entityId;
+    case "JournalEntry":
+      return "/dashboard/journal";
+    default:
+      return null;
+  }
+}
 
 function actionColor(a: string) {
   if (a === "CREATE" || a === "POST" || a === "SUBMIT" || a === "PAY") return "ISSUED";
@@ -57,7 +82,7 @@ export default function AuditLogPage() {
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-medium">{e.action}</span>
                   <span className="text-slate-500">on</span>
-                  <span className="font-mono text-xs text-slate-700">{e.entity}#{e.entityId.slice(0, 8)}</span>
+                  {(() => { const href = entityHref(e.entity, e.entityId); const label = e.entity + "#" + e.entityId.slice(0, 8); return href ? <Link href={href} className="font-mono text-xs text-brand-700 hover:underline">{label}</Link> : <span className="font-mono text-xs text-slate-700">{label}</span>; })()}
                   {e.user && <span className="text-xs text-slate-500">by {e.user.name ?? e.user.email}</span>}
                 </div>
                 {e.message && <p className="mt-1 text-sm text-slate-600">{e.message}</p>}

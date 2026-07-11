@@ -91,12 +91,12 @@ export default function DashboardPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <Card title="Cash" value={fmt(d.cashPosition)} accent={d.cashPosition >= 0 ? "good" : "bad"} hint="MYR" />
-        <Card title="AR Outstanding" value={fmt(d.arOutstanding)} accent={d.arOutstanding > 50000 ? "warn" : "good"} />
-        <Card title="AP Outstanding" value={fmt(d.apOutstanding)} />
-        <Card title="Inventory" value={fmt(d.inventoryValue)} hint="at cost" />
-        <Card title="Revenue MTD" value={fmt(d.revenueMtd)} accent="good" />
-        <Card title="Expenses MTD" value={fmt(d.expenseMtd)} accent="warn" />
+        <Link href="/reports"><Card title="Cash" value={fmt(d.cashPosition)} accent={d.cashPosition >= 0 ? "good" : "bad"} hint="MYR" /></Link>
+        <Link href="/receivables"><Card title="AR Outstanding" value={fmt(d.arOutstanding)} accent={d.arOutstanding > 50000 ? "warn" : "good"} /></Link>
+        <Link href="/payables"><Card title="AP Outstanding" value={fmt(d.apOutstanding)} /></Link>
+        <Link href="/stock"><Card title="Inventory" value={fmt(d.inventoryValue)} hint="at cost" /></Link>
+        <Link href="/reports"><Card title="Revenue MTD" value={fmt(d.revenueMtd)} accent="good" /></Link>
+        <Link href="/reports"><Card title="Expenses MTD" value={fmt(d.expenseMtd)} accent="warn" /></Link>
       </div>
 
       <section>

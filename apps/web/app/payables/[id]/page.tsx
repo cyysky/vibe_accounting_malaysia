@@ -48,6 +48,7 @@ export default function BillDetailPage() {
   const id = params.id;
   const bill = useQuery({ queryKey: ['supplierInvoice', id], queryFn: () => api.getSupplierInvoice(id) as Promise<Bill> });
   const auditQ = useQuery({ queryKey: ['audit-bill', id], queryFn: () => api.auditLogFor('SupplierInvoice', id) });
+  const paymentsQ = useQuery({ queryKey: ['bill-payments', id], queryFn: () => api.paymentsByBill(id) });
 
   if (bill.isLoading) return <p className={'p-8 text-slate-500'}>Loading bill…</p>;
   if (bill.error) return <p className={'p-8 text-rose-600'}>Failed to load: {(bill.error as Error).message}</p>;
@@ -129,6 +130,40 @@ export default function BillDetailPage() {
           </table>
         </div>
       </div>
+
+      {(paymentsQ.data ?? []).length > 0 && (
+        <div className="mt-6 rounded-lg border bg-white shadow-sm">
+          <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold text-slate-700">
+            <Wallet className="h-4 w-4" /> Payments applied
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-2">Payment #</th>
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2">Method</th>
+                  <th className="px-4 py-2 text-right">Applied</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paymentsQ.data!.flatMap((p) =>
+                  p.applications
+                    .filter((a) => a.invoiceId === id)
+                    .map((a) => (
+                      <tr key={p.id} className="border-t">
+                        <td className="px-4 py-2"><span className="font-mono text-xs">{p.number}</span></td>
+                        <td className="px-4 py-2">{p.date}</td>
+                        <td className="px-4 py-2">{p.method}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{fmt(Number(a.amount))}</td>
+                      </tr>
+                    )),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {(auditQ.data ?? []).length > 0 && (
         <div className='mt-6 rounded-lg border bg-white p-4 text-sm'>

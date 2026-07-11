@@ -250,6 +250,19 @@ describe('Extra endpoints (e2e over HTTP)', () => {
     expect(missing.status).toBe(404);
   });
 
+
+  it('GET /api/ar/payments/by-invoice/:id returns applied payments', async () => {
+    const r = await http('/api/ar/payments/by-invoice/00000000-0000-0000-0000-000000000000', { token });
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body?.data ?? r.body)).toBe(true);
+  });
+
+  it('GET /api/ap/payments/by-bill/:id returns applied payments', async () => {
+    const r = await http('/api/ap/payments/by-bill/00000000-0000-0000-0000-000000000000', { token });
+    expect(r.status).toBe(200);
+    expect(Array.isArray(r.body?.data ?? r.body)).toBe(true);
+  });
+
   it('POST /api/ar/sales-orders/:id/convert-to-invoice returns 404 for unknown SO', async () => {
     const r = await http('/api/ar/sales-orders/00000000-0000-0000-0000-000000000000/convert-to-invoice', {
       method: 'POST',

@@ -120,6 +120,29 @@ export class PaymentsService {
       include: { supplier: true, applications: { include: { invoice: true } } },
     });
   }
+  /**
+   * List customer payments that have an application line pointing at the
+   * given invoice. Returned in date-desc order.
+   */
+  listCustomerPaymentsByInvoice(invoiceId: string) {
+    return this.prisma.customerPayment.findMany({
+      where: { applications: { some: { invoiceId } } },
+      include: { customer: true, applications: { where: { invoiceId } } },
+      orderBy: { date: "desc" },
+    });
+  }
+
+  /**
+   * List supplier payments that have an application line pointing at the
+   * given bill. Returned in date-desc order.
+   */
+  listSupplierPaymentsByBill(billId: string) {
+    return this.prisma.supplierPayment.findMany({
+      where: { applications: { some: { invoiceId: billId } } },
+      include: { supplier: true, applications: { where: { invoiceId: billId } } },
+      orderBy: { date: "desc" },
+    });
+  }
 
   async createSupplierPayment(bookId: string, dto: CreateSupplierPaymentDto) {
     if (!dto.supplierId) throw new BadRequestException("supplierId required");

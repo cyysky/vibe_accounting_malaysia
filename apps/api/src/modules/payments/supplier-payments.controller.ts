@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { PaymentsService } from "./payments.service";
 import { CreateSupplierPaymentDto } from "./dto/payment.dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -22,6 +22,12 @@ export class SupplierPaymentsController {
   @Get(':id')
   get(@Param('id') id: string) {
     return this.svc.getSupplierPayment(id);
+  }
+
+  @Get('by-bill/:billId')
+  @ApiOperation({ summary: "List supplier payments applied to a given bill" })
+  byBill(@Param('billId') billId: string) {
+    return this.svc.listSupplierPaymentsByBill(billId);
   }
 
   @Post()

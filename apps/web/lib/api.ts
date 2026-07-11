@@ -761,6 +761,9 @@ class ApiClient {
   customerPayment(id: string): Promise<Payment> {
     return this.request<Payment>('GET', `/ar/payments/${id}`);
   }
+  paymentsByInvoice(invoiceId: string): Promise<Payment[]> {
+    return this.request<Payment[]>('GET', '/ar/payments/by-invoice/' + invoiceId);
+  }
   createCustomerPayment(input: { customerId: string; date: string; amount: number; method: string; reference?: string; notes?: string; applications: Array<{ invoiceId: string; amount: number }> }): Promise<Payment> {
     return this.request<Payment>('POST', '/ar/payments', input);
   }
@@ -769,6 +772,9 @@ class ApiClient {
   }
   supplierPayment(id: string): Promise<Payment> {
     return this.request<Payment>('GET', `/ap/payments/${id}`);
+  }
+  paymentsByBill(billId: string): Promise<Payment[]> {
+    return this.request<Payment[]>('GET', '/ap/payments/by-bill/' + billId);
   }
   createSupplierPayment(input: { supplierId: string; date: string; amount: number; method: string; reference?: string; notes?: string; applications: Array<{ invoiceId: string; amount: number }> }): Promise<Payment> {
     return this.request<Payment>('POST', '/ap/payments', input);

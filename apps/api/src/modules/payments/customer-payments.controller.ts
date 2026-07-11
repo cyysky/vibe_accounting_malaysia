@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { PaymentsService } from "./payments.service";
 import { CreateCustomerPaymentDto } from "./dto/payment.dto";
 import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
@@ -22,6 +22,12 @@ export class CustomerPaymentsController {
   @Get(':id')
   get(@Param('id') id: string) {
     return this.svc.getCustomerPayment(id);
+  }
+
+  @Get('by-invoice/:invoiceId')
+  @ApiOperation({ summary: "List customer payments applied to a given invoice" })
+  byInvoice(@Param('invoiceId') invoiceId: string) {
+    return this.svc.listCustomerPaymentsByInvoice(invoiceId);
   }
 
   @Post()

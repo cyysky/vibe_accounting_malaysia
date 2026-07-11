@@ -103,6 +103,17 @@ describe("PaymentsService (customer)", () => {
       expect.objectContaining({ where: { id: "c1" }, data: { outstanding: { decrement: expect.anything() } } }),
     );
   });
+
+  it("listCustomerPaymentsByInvoice filters by invoiceId via applications.some", async () => {
+    const prisma = makePrisma();
+    prisma.customerPayment.findMany.mockResolvedValue([{ id: "p1", number: "RCP-00001", applications: [{ invoiceId: "i1", amount: 100 }] }]);
+    const svc = new PaymentsService(prisma, makeSeq(), makePosting());
+    const res = await svc.listCustomerPaymentsByInvoice("i1");
+    expect(res[0].number).toBe("RCP-00001");
+    expect(prisma.customerPayment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { applications: { some: { invoiceId: "i1" } } } }),
+    );
+  });
 });
 
 describe("PaymentsService (supplier)", () => {
@@ -209,5 +220,16 @@ describe("PaymentsService (supplier)", () => {
         applications: [{ invoiceId: "i1", amount: 50 }],
       } as never),
     ).resolves.toBeDefined();
+  });
+
+  it("listSupplierPaymentsByBill filters by billId via applications.some", async () => {
+    const prisma = makePrisma();
+    prisma.supplierPayment.findMany.mockResolvedValue([{ id: "p2", number: "PAY-00002", applications: [{ invoiceId: "b1", amount: 50 }] }]);
+    const svc = new PaymentsService(prisma, makeSeq(), makePosting());
+    const res = await svc.listSupplierPaymentsByBill("b1");
+    expect(res[0].number).toBe("PAY-00002");
+    expect(prisma.supplierPayment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { applications: { some: { invoiceId: "b1" } } } }),
+    );
   });
 });

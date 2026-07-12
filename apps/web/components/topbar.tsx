@@ -81,6 +81,12 @@ export function Topbar() {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
+  // Auto-scroll the active result into view as the user arrows up/down.
+  useEffect(() => {
+    const el = searchRef.current?.querySelector<HTMLElement>(`[data-result-idx="${activeIdx}"]`);
+    if (el) el.scrollIntoView({ block: "nearest" });
+  }, [activeIdx]);
+
   const searchQ = useQuery({
     queryKey: ['topbar-search', searchTerm],
     queryFn: () => api.dashboardSearch(searchTerm),
@@ -206,7 +212,7 @@ export function Topbar() {
                       bankAccount: 'Bank Accounts',
                     };
                     return (
-                      <li key={`${hit.kind}-${hit.id}-${idx}`}>
+                      <li key={`${hit.kind}-${hit.id}-${idx}`} data-result-idx={idx}>
                         {showHeader && (
                           <div className="bg-slate-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                             {headerLabel[hit.kind]}
@@ -214,6 +220,7 @@ export function Topbar() {
                         )}
                         <Link
                           href={hit.href}
+                          onMouseEnter={() => setActiveIdx(idx)}
                           onClick={() => {
                             setSearchOpen(false);
                             setSearchTerm('');

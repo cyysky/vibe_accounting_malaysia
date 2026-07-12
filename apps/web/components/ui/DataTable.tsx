@@ -3,6 +3,7 @@
 import clsx from 'clsx';
 import { ReactNode } from 'react';
 import { SkeletonTable } from './Skeleton';
+import { displayValue } from '../../lib/displayValue';
 
 export interface Column<T> {
   key: string;
@@ -24,9 +25,7 @@ export interface DataTableProps<T> {
 
 export function DataTable<T>({ data, columns, rowKey, empty, loading, onRowClick }: DataTableProps<T>) {
   function defaultRender(row: T, key: string): ReactNode {
-    const v = (row as Record<string, unknown>)[key];
-    if (v == null) return '';
-    return String(v);
+    return displayValue((row as Record<string, unknown>)[key]);
   }
   return (
     <div className="overflow-x-auto rounded-lg border bg-white shadow-sm">

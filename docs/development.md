@@ -107,8 +107,10 @@ Fast, no database, no network.  Run from `apps/api`:
 npm test           # runs every *.spec.ts under src/
 ```
 
-Covers GL, posting, e-invoice mapper + validator, recurring, stock, AR,
-auth, credit notes, bank accounts.
+Covers GL (+ posting), AR, AP, e-invoice mapper + validator + einvoice
+service orchestration, recurring, stock, stock-movements, bank accounts,
+payments, credit notes, debit notes, sales orders, purchase orders,
+audit log, auth, account-books.
 
 ### 2. Live HTTP smoke (Node, end-to-end CLI)
 

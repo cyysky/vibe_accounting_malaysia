@@ -147,6 +147,15 @@ shortcut buttons back to the parent workflow:
 | List page               | Detail page                       | Shortcut buttons                                |
 | ----------------------- | --------------------------------- | ----------------------------------------------- |
 | `/receivables`         | `/receivables/[id]`              | Customer payment, credit note, MyInvois buttons |
+| `/receivables/customers` | `/receivables/customers/[id]`   | Receive payment, credit note; outstanding, tax, contact |
+| `/payables/suppliers`  | `/payables/suppliers/[id]`     | Pay bill, debit note; balance, tax, address |
+| `/sales`                | `/sales/[id]`                   | Convert to invoice |
+| `/purchase`             | `/purchase/[id]`                | Convert to bill |
+| `/recurring`            | `/recurring/[id]`               | Run now, delete; schedule + audit activity |
+| `/stock`                | `/stock/[id]`                   | New movement; on-hand + reorder + movement history |
+| `/dashboard/journal`    | `/dashboard/journal/[id]`       | Reverse; lines + audit activity |
+| `/reports/bank-reconciliation` | `/reports/bank-reconciliation/[accountId]` | Editable statement balance, GL activity, deep-link to journal |
+| `/settings/users`       | `/settings/users/[id]`          | Edit name/role, activate/deactivate, remove (owner only) |
 | `/receivables/customers/[id]` | (same)                       | Outstanding + tax + contact + audit activity    |
 | `/payables`            | `/payables/[id]`                 | Supplier payment, debit note                    |
 | `/payables/suppliers/[id]`    | (same)                       | Outstanding + tax + contact + audit activity    |
@@ -161,13 +170,31 @@ shortcut buttons back to the parent workflow:
 - The dashboard's "Recent activity" feed uses an `entityHref()` helper
   to route each entity name to its detail page based on entity type.
 
+## UI / UX primitives
+
+- `<PageHeader title description breadcrumbs actions>` — consistent detail-page
+  header with breadcrumb trail and shortcut actions.
+- `entityHref()` helper in `apps/web/app/dashboard/page.tsx` and
+  `apps/web/app/audit-log/page.tsx` — maps an `(entity, entityId)` pair to a
+  deep link, so the audit log, search and dashboard all link into the same
+  detail pages.
+- `<Toast>` / `useToast()` — global toast notifications for success / error /
+  warning / info. Safe no-op if used outside `ToastProvider`. Auto-dismiss
+  with longer TTL for error messages.
+- `<Skeleton>`, `<SkeletonCard>`, `<SkeletonTable>` — animated placeholders
+  for initial loads; used on dashboard, journal detail, stock item detail,
+  user detail and bank-reconciliation detail.
+- `<EmptyState>` — consistent dashed-border panel with icon + title +
+  description + optional CTA.
+
 ## Testing
 
-20 Jest test suites / 124 unit tests covering: GL (service + posting),
+23 Jest test suites / 164 unit tests covering: GL (service + posting),
 AR, AP, e-invoice mapper (basic + extras), UBL 2.1 validator (basic +
 extras), MyInvois HTTP client, recurring, stock, bank accounts, payments
 (customer + supplier), credit notes, debit notes, sales orders,
-purchase orders, audit log (+ CSV escape rules), auth.
+purchase orders, audit log (+ CSV escape rules), auth, account-books,
+einvoice service (submit / poll / cancel orchestration), stock-movements.
 
 4 live HTTP e2e suites: happy-path, auth-matrix, einvoice, extra.
 Extra covers the new `/sales/orders/:id`, `/purchase/orders/:id` and

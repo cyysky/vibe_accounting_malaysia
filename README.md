@@ -58,6 +58,24 @@ front end, packaged as a self-contained Docker Compose stack.
 | `recurring`       | Recurring invoice templates (weekly / monthly / quarterly / yearly)          |
 | `audit-log`       | Entity-level activity feed                                                    |
 | `health`          | Container / app liveness                                                      |
+| `account-books`   | Workspace configuration (code, base currency, address)                        |
+| `audit-log`       | Append-only audit trail (also exposed to the Activity Log UI)                |
+
+## UI / UX
+
+- **Detail pages** for every list entity (customer, supplier, sales order,
+  purchase order, recurring template, stock item, journal entry, bank
+  reconciliation, user) — breadcrumbs, action shortcuts back to the parent
+  workflow, and a system-wide audit-log Activity section.
+- **Toast notifications** (`useToast()`) fire on every mutation (success,
+  warning, error, info) so users get immediate feedback without watching for
+  list re-renders.
+- **Skeleton loading** on the dashboard, journal detail, stock item detail,
+  user detail and bank-reconciliation detail pages — avoids blank-screen flash.
+- **Deep linking** from list rows, audit log, search results, and dashboard
+  cards into the matching detail page; the audit-log Activity section on every
+  detail page links back to the originating user / entity.
+- **Empty states** are explicit icons + descriptions + CTAs (not blank text).
 
 ## System-wide linking
 
@@ -151,7 +169,7 @@ aggregation, the mapper and config module also expose:
 ## Tests
 
 - **Unit tests** (
-px jest in pps/api) — 124 tests across 20 suites
+px jest in pps/api) — 164 tests across 23 suites
   covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
   reports / credit-notes / auth services plus the UBL mapper, UBL validator,
   MyInvois HTTP client, payments (customer + supplier), debit notes,
@@ -166,7 +184,7 @@ px jest --config ./test/jest-e2e.json) — run
 ## Tests
 
 - **Unit tests** (
-px jest in pps/api) — 124 tests across 20 suites
+px jest in pps/api) — 164 tests across 23 suites
   covering the GL / AR / AP / einvoice / stock / bank-accounts / recurring /
   reports / credit-notes / auth services plus the UBL mapper, UBL validator
   and MyInvois HTTP client.

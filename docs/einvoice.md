@@ -189,6 +189,37 @@ Use the helper `paymentModeDisplayName(code)` to render the human-readable label
 
 The mapper exposes a `toCountryCode(input)` helper that resolves free-form country names (`"Malaysia"`, `"SG"`, `"United States"`, ...) to the ISO-3166-1 alpha-3 codes MyInvois requires in `PostalAddress/Country/IdentificationCode`. Covers all ASEAN neighbours plus major trading partners (USA, UK, AU, CN, HK, JP, KR, PH, VN, IN, BN). Falls back to `MYS` for unknown / empty input.
 
+## InvoicePeriod (delivery date), PaymentMeans + PayeeFinancialAccount, AdditionalDocumentReference
+
+The mapper accepts three optional extensions on the mapper context (and the
+`SubmitInvoiceDto`) so callers can attach richer metadata per
+[MyInvois SDK](https://sdk.myinvois.hasil.gov.my/):
+
+| Field                                | UBL 2.1 path                                | Purpose                                                       |
+| ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------- |
+| `deliveryDate`                       | `InvoicePeriod[0].StartDate`                | Goods / service delivery date (taxpoint).                      |
+| `paymentMeansCode` (e.g. `"03"`)     | `PaymentMeans[0].PaymentMeansCode`          | Mode of payment (01 Cash → 10 PayPal / Online).               |
+| `paymentAccountNo`                   | `PaymentMeans[0].PayeeFinancialAccount[0].ID` | Supplier bank account for direct credit / IBAN equivalents.   |
+| `additionalReferences[]`             | `AdditionalDocumentReference[]`              | FTT (tourism tax), withholding tax or other regulator refs.   |
+
+Example payload:
+
+```json
+{
+  "version": "1.1",
+  "format": "JSON",
+  "deliveryDate": "2025-01-20",
+  "paymentMeansCode": "03",
+  "paymentAccountNo": "1234567890",
+  "additionalReferences": [
+    { "id": "FTT-2025-001", "documentType": "FTT", "documentDescription": "Tourism tax reference" }
+  ]
+}
+```
+
+All four fields are optional. The mapper omits the corresponding UBL block when
+the value is absent so existing invoice flows are unaffected.
+
 ## Pre-submission validation
 
 Before every submission we run a 100% in-process UBL 2.1 v1.1 conformance

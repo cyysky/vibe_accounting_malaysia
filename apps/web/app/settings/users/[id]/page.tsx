@@ -9,6 +9,8 @@ import { api, type AuthUser } from "../../../../lib/api";
 import { Button } from "../../../../components/ui/Button";
 import { PageHeader } from "../../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { useToast } from "../../../../components/ui/Toast";
+import { Skeleton } from "../../../../components/ui/Skeleton";
 
 const ROLE_DESC: Record<string, string> = {
   OWNER: "Full access including account book configuration and user management.",
@@ -39,7 +41,9 @@ export default function UserDetailPage() {
       qc.invalidateQueries({ queryKey: ["users"] });
       setName(null);
       setRole(null);
+      toast.success("User updated");
     },
+    onError: (e: Error) => toast.error("Update failed", e.message),
   });
 
   const remove = useMutation({
@@ -50,7 +54,14 @@ export default function UserDetailPage() {
     },
   });
 
-  if (user.isLoading) return <p className="p-8 text-slate-500">Loading user…</p>;
+  const toast = useToast();
+  if (user.isLoading) return (
+    <div className="space-y-4 p-8">
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="h-3 w-1/2" />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-lg border bg-white" />)}</div>
+    </div>
+  );
   if (user.error) return <p className="p-8 text-rose-600">Failed to load: {(user.error as Error).message}</p>;
   const u = user.data!;
   const canManage = me.data?.role === "OWNER" || me.data?.role === "ADMIN";

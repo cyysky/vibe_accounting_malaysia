@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "../../../components/ui/Toast";
 import { Plus, Wallet } from "lucide-react";
 import { api } from "../../../lib/api";
 import type { Customer, CustomerInvoice, Payment } from "../../../lib/api";
@@ -186,6 +187,7 @@ function PaymentForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
 }
 
 export default function CustomerPaymentsPage() {
+  const toast = useToast();
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["customerPayments"], queryFn: () => api.customerPayments() });
   const [creating, setCreating] = useState(false);

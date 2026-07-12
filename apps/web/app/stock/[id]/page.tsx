@@ -11,6 +11,8 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { DataTable } from "../../../components/ui/DataTable";
 import { Modal } from "../../../components/ui/Modal";
+import { Skeleton, SkeletonTable } from "../../../components/ui/Skeleton";
+import { useToast } from "../../../components/ui/Toast";
 
 const fmt = (n: number) => (n ?? 0).toLocaleString("en-MY", { style: "currency", currency: "MYR" });
 const qty = (n: number) => Number(n).toLocaleString("en-MY", { maximumFractionDigits: 2 });
@@ -92,7 +94,15 @@ export default function ItemDetailPage() {
   const auditQ = useQuery({ queryKey: ["audit-item", id], queryFn: () => api.auditLogFor("Item", id) });
   const [creating, setCreating] = useState(false);
 
-  if (item.isLoading) return <p className="p-8 text-slate-500">Loading item…</p>;
+  const toast = useToast();
+  if (item.isLoading) return (
+    <div className="space-y-4 p-8">
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="h-3 w-1/2" />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-lg border bg-white" />)}</div>
+      <SkeletonTable rows={4} columns={6} />
+    </div>
+  );
   if (item.error) return <p className="p-8 text-rose-600">Failed to load: {(item.error as Error).message}</p>;
   const i = item.data!;
   const lowStock = Number(i.onHand) <= Number(i.reorderLevel);

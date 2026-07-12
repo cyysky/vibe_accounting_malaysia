@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { Plus, X, ScrollText, Undo2 } from 'lucide-react';
+import { useToast } from '../../../components/ui/Toast';
 import { api, type Account } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
@@ -66,9 +67,14 @@ export default function JournalPage() {
   );
   const balanced = Math.abs(totals.debit - totals.credit) < 0.001;
 
+  const toast = useToast();
   const reverse = useMutation({
     mutationFn: (input: { id: string; reason?: string }) => api.reverseJournal(input.id, input.reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['journals'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['journals'] });
+      toast.success('Journal reversed', 'A new reversing entry has been posted.');
+    },
+    onError: (e: Error) => useToast().error('Reversal failed', e.message),
   });
   const create = useMutation({
     mutationFn: (data: JournalForm) => api.createJournal(data),

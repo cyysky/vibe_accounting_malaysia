@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, ScrollText, Undo2, FileText, ListTree } from "lucide-react";
+import { useToast } from "../../../../components/ui/Toast";
+import { Skeleton, SkeletonTable } from "../../../../components/ui/Skeleton";
 import { api, type JournalEntry, type JournalLine } from "../../../../lib/api";
 import { Button } from "../../../../components/ui/Button";
 import { PageHeader } from "../../../../components/ui/PageHeader";
@@ -29,10 +31,19 @@ export default function JournalDetailPage() {
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       setReversing(false);
       setReason("");
+      toast.success("Journal reversed", "A new reversing entry has been posted.");
     },
+    onError: (e: Error) => toast.error("Reversal failed", e.message),
   });
 
-  if (j.isLoading) return <p className="p-8 text-slate-500">Loading journal…</p>;
+  const toast = useToast();
+  if (j.isLoading) return (
+    <div className="space-y-4 p-8">
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="h-3 w-1/2" />
+      <SkeletonTable rows={4} columns={4} />
+    </div>
+  );
   if (j.error) return <p className="p-8 text-rose-600">Failed to load: {(j.error as Error).message}</p>;
   const journal = j.data!;
   const lines = journal.lines ?? [];

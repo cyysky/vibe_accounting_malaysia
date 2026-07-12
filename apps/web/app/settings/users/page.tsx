@@ -7,6 +7,7 @@ import { Pencil, Plus, Trash2, Users, X } from "lucide-react";
 import { api } from "../../../lib/api";
 import type { AuthUser } from "../../../lib/api";
 import { PageHeader } from "../../../components/ui/PageHeader";
+import { useToast } from "../../../components/ui/Toast";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { Button } from "../../../components/ui/Button";
 import { DataTable } from "../../../components/ui/DataTable";
@@ -34,6 +35,7 @@ const emptyForm: UserForm = { email: "", name: "", password: "", role: "CLERK" }
 
 export default function UsersPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<AuthUser | null>(null);
   const [form, setForm] = useState<UserForm>(emptyForm);
@@ -50,8 +52,9 @@ export default function UsersPage() {
       setShowForm(false);
       setForm(emptyForm);
       setError(null);
+      toast.success("User invited", "They can sign in immediately with the password you set.");
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => { setError(e.message); toast.error("Invite failed", e.message); },
   });
 
   const updateMut = useMutation({
@@ -67,7 +70,8 @@ export default function UsersPage() {
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => api.deleteUser(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["users"] }); toast.success("User removed"); },
+    onError: (e: Error) => toast.error("Remove failed", e.message),
   });
 
   function openCreate() {

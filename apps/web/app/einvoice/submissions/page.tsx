@@ -10,11 +10,14 @@ import { Button } from '../../../components/ui/Button';
 import { DataTable } from '../../../components/ui/DataTable';
 import { Badge } from '../../../components/ui/Form';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { useToast } from '../../../components/ui/Toast';
+import { Skeleton, SkeletonTable } from '../../../components/ui/Skeleton';
 
 const fmt = (d?: string) => (d ? new Date(d).toLocaleString('en-MY') : '—');
 
 export default function EinvoiceSubmissionsPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const subs = useQuery({
     queryKey: ['einvoice-submissions'],
     queryFn: () => api.einvoiceSubmissions(),
@@ -23,15 +26,18 @@ export default function EinvoiceSubmissionsPage() {
 
   const poll = useMutation({
     mutationFn: (id: string) => api.pollEinvoiceSubmission(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }); toast.info('Poll complete', 'Latest status fetched from MyInvois.'); },
+    onError: (e: Error) => toast.error('Poll failed', e.message),
   });
   const cancel = useMutation({
     mutationFn: (id: string) => api.cancelEinvoice(id, 'User requested cancellation'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }); toast.success('Submission cancelled', 'MyInvois has been notified.'); },
+    onError: (e: Error) => toast.error('Cancel failed', e.message),
   });
   const reject = useMutation({
     mutationFn: (id: string) => api.rejectEinvoice(id, 'Buyer rejected the document'),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }); toast.warning('Submission rejected', 'Buyer-initiated rejection has been recorded.'); },
+    onError: (e: Error) => toast.error('Reject failed', e.message),
   });
   const recent = useMutation({
     mutationFn: () => api.recentEinvoices('SANDBOX'),

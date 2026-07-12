@@ -31,6 +31,7 @@ export function Topbar() {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeIdx, setActiveIdx] = useState(0);
   const searchRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -78,13 +79,13 @@ export function Topbar() {
     if (!r) return [];
     const out: SearchHit[] = [];
     for (const c of r.customers) {
-      out.push({ kind: 'customer', id: c.id, label: c.name, sub: c.code, href: `/receivables?customerId=${c.id}` });
+      out.push({ kind: 'customer', id: c.id, label: c.name, sub: c.code, href: `/receivables/customers/${c.id}` });
     }
     for (const c of r.suppliers) {
-      out.push({ kind: 'supplier', id: c.id, label: c.name, sub: c.code, href: `/payables?supplierId=${c.id}` });
+      out.push({ kind: 'supplier', id: c.id, label: c.name, sub: c.code, href: `/payables/suppliers/${c.id}` });
     }
     for (const i of r.items) {
-      out.push({ kind: 'item', id: i.id, label: i.name, sub: i.code, href: `/stock` });
+      out.push({ kind: 'item', id: i.id, label: i.name, sub: i.code, href: `/stock/${i.id}` });
     }
     for (const inv of r.invoices) {
       out.push({ kind: 'invoice', id: inv.id, label: inv.number, sub: inv.customer?.name, href: `/receivables/${inv.id}` });
@@ -93,7 +94,7 @@ export function Topbar() {
       out.push({ kind: 'bill', id: bill.id, label: bill.number, sub: bill.supplier?.name, href: `/payables/${bill.id}` });
     }
     for (const j of r.journals) {
-      out.push({ kind: 'journal', id: j.id, label: j.number, sub: j.description ?? undefined, href: `/dashboard/journal?number=${encodeURIComponent(j.number)}` });
+      out.push({ kind: 'journal', id: j.id, label: j.number, sub: j.description ?? undefined, href: `/dashboard/journal/${j.id}` });
     }
     return out;
   })();
@@ -120,11 +121,18 @@ export function Topbar() {
               <input
                 autoFocus
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setActiveIdx(0); }}
                 placeholder="Type to search…"
                 className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-              />
+                  onKeyDown={(e) => {
+                    if (results.length === 0) return;
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx((i) => (i + 1) % results.length); }
+                    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx((i) => (i - 1 + results.length) % results.length); }
+                    else if (e.key === 'Enter') { e.preventDefault(); const r = results[activeIdx]; if (r) { setSearchOpen(false); setSearchTerm(''); router.push(r.href); } }
+                  }}
+                />
               {searchQ.isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" />}
+              {searchTerm.length >= 2 && results.length > 0 && <span className="text-[10px] text-slate-400">↑↓ to move · ↵ to open</span>}
             </div>
             <div className="max-h-80 overflow-y-auto">
               {searchTerm.length < 2 && (
@@ -143,7 +151,7 @@ export function Topbar() {
                           setSearchOpen(false);
                           setSearchTerm('');
                         }}
-                        className="flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50"
+                        className={'flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 ' + (idx === activeIdx ? 'bg-brand-50' : '')}
                       >
                         <div className="min-w-0">
                           <div className="truncate font-medium text-slate-900">{hit.label}</div>

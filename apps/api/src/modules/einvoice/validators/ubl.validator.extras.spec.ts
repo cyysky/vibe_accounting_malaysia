@@ -119,6 +119,22 @@ describe("UBL validator: extras", () => {
     expect(a.documentHash.startsWith("val-")).toBe(true);
   });
 
+  it("validates an invoice with InvoicePeriod, PaymentMeans and AdditionalDocumentReference", () => {
+    const doc = buildUblInvoice({
+      invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+      customer: baseCustomer,
+      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      taxCodes: new Map(),
+      version: "1.1",
+      deliveryDate: new Date("2025-01-20T00:00:00Z"),
+      paymentMeansCode: "03",
+      paymentAccountNo: "1234567890",
+      additionalReferences: [{ id: "FTT-2025-001" }],
+    });
+    const result = validateUblDocument(doc);
+    expect(result.valid).toBe(true);
+  });
+
   it("flags a 5-digit MSIC code as warning when missing", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },

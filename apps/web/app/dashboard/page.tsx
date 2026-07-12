@@ -10,6 +10,7 @@ import { api } from "../../lib/api";
 import type { DashboardSummary } from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatusBadge } from "../../components/ui/StatusBadge";
+import { Skeleton, SkeletonCard, SkeletonTable } from "../../components/ui/Skeleton";
 
 function Card({ title, value, hint, accent }: { title: string; value: string; hint?: string; accent?: "good" | "warn" | "bad" }) {
   const ring = accent === "good" ? "ring-emerald-100" : accent === "warn" ? "ring-amber-100" : accent === "bad" ? "ring-rose-100" : "";
@@ -78,7 +79,14 @@ export default function DashboardPage() {
     | { operating: number; investing: number; financing: number; net: number }
     | undefined;
 
-  if (isLoading) return <p className="p-8 text-slate-500">Loading dashboard…</p>;
+  if (isLoading) return (
+    <div className="space-y-4 p-8">
+      <Skeleton className="h-8 w-1/3" />
+      <Skeleton className="h-3 w-1/2" />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">{Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}</div>
+      <SkeletonTable rows={4} columns={4} />
+    </div>
+  );
   if (error) return <p className="p-8 text-red-600">Failed to load: {(error as Error).message}</p>;
   const d = data as DashboardSummary;
 

@@ -7,6 +7,7 @@ import { Landmark, AlertCircle, CheckCircle2, RefreshCw, ArrowLeft, BookOpen } f
 import { api } from "../../../../lib/api";
 import { PageHeader } from "../../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { Skeleton, SkeletonTable } from "../../../../components/ui/Skeleton";
 
 const fmt = (n: number | undefined) => (Number(n ?? 0)).toLocaleString("en-MY", { style: "currency", currency: "MYR" });
 
@@ -55,7 +56,11 @@ export default function BankAccountReconciliationPage() {
       />
 
       {rec.isLoading ? (
-        <p className="p-8 text-slate-500">Loading reconciliation…</p>
+        <div className="space-y-4 p-8">
+          <Skeleton className="h-8 w-1/3" />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-lg border bg-white" />)}</div>
+          <SkeletonTable rows={4} columns={5} />
+        </div>
       ) : rec.error ? (
         <p className="p-8 text-rose-600">Failed to load: {(rec.error as Error).message}</p>
       ) : !data ? (

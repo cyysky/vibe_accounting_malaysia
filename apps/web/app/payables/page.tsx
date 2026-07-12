@@ -12,6 +12,7 @@ import { DataTable } from '../../components/ui/DataTable';
 import { Modal } from '../../components/ui/Modal';
 import { Field, Input, Select, Badge } from '../../components/ui/Form';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { useToast } from '../../components/ui/Toast';
 
 const fmt = (n: number) => (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR' });
 
@@ -33,6 +34,7 @@ type SupplierForm = z.infer<typeof supplierSchema>;
 
 export default function PayablesPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -50,7 +52,8 @@ export default function PayablesPage() {
   });
   const remove = useMutation({
     mutationFn: (id: string) => api.deleteSupplier(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['suppliers'] }); toast.success('Supplier deleted'); },
+    onError: (e: Error) => toast.error('Delete failed', e.message),
   });
 
   const form = useForm<SupplierForm>({

@@ -12,6 +12,7 @@ import { DataTable } from '../../components/ui/DataTable';
 import { Modal } from '../../components/ui/Modal';
 import { Field, Input, Select, Badge, EinvoiceStatusBadge } from '../../components/ui/Form';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { useToast } from '../../components/ui/Toast';
 
 const fmt = (n: number) =>
   (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR' });
@@ -35,6 +36,7 @@ type CustomerForm = z.infer<typeof customerSchema>;
 
 export default function ReceivablesPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const [editing, setEditing] = useState<Customer | null>(null);
   const [showForm, setShowForm] = useState(false);
 

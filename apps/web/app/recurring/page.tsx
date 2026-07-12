@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { DataTable } from "../../components/ui/DataTable";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { useToast } from "../../components/ui/Toast";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 
 interface LineDraft {
@@ -144,10 +145,11 @@ function RecurringForm({ onClose, onSaved }: { onClose: () => void; onSaved: () 
 
 export default function RecurringPage() {
   const qc = useQueryClient();
+  const toast = useToast();
   const q = useQuery({ queryKey: ["recurring"], queryFn: () => api.recurringInvoices() });
-  const remove = useMutation({ mutationFn: (id: string) => api.deleteRecurring(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["recurring"] }) });
-  const runOne = useMutation({ mutationFn: (id: string) => api.runRecurring(id), onSuccess: () => qc.invalidateQueries({ queryKey: ["recurring"] }) });
-  const runDue = useMutation({ mutationFn: () => api.runDueRecurring(), onSuccess: () => qc.invalidateQueries({ queryKey: ["recurring"] }) });
+  const remove = useMutation({ mutationFn: (id: string) => api.deleteRecurring(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["recurring"] }); toast.success("Recurring invoice deleted"); }, onError: (e: Error) => toast.error("Delete failed", e.message) });
+  const runOne = useMutation({ mutationFn: (id: string) => api.runRecurring(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["recurring"] }); toast.success("Recurring invoice generated"); }, onError: (e: Error) => toast.error("Generation failed", e.message) });
+  const runDue = useMutation({ mutationFn: () => api.runDueRecurring(), onSuccess: (r) => { qc.invalidateQueries({ queryKey: ["recurring"] }); toast.success("Run complete", typeof r === "number" ? r + " invoice(s) generated" : undefined); }, onError: (e: Error) => toast.error("Run failed", e.message) });
   const [creating, setCreating] = useState(false);
 
   return (

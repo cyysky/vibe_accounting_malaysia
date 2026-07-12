@@ -5,6 +5,21 @@ Cloud-native accounting platform for Malaysian businesses. Built with
 front end, packaged as a self-contained Docker Compose stack.
 
 > Reference: <https://sdk.myinvois.hasil.gov.my/> for LHDNM e-Invoice integration.
+## Screenshots
+
+### Dashboard
+
+![Dashboard overview with financial KPIs, quick actions and recent activity](docs/screenshots/dashboard.png)
+
+### Accounting workflows
+
+| Journal entry | Customer receivables |
+| --- | --- |
+| ![Balanced journal entry with account-level debit and credit lines](docs/screenshots/journal-entry.png) | ![Customer receivables list with balances and status](docs/screenshots/customer-invoices.png) |
+
+### Financial reports
+
+![Profit and loss, balance sheet and AR/AP aging reports](docs/screenshots/reports.png)
 
 ## Highlights
 

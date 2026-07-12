@@ -213,7 +213,7 @@ build that's actually running.
 
 ## Testing
 
-24 Jest test suites / 180 unit tests covering: GL (service + posting),
+24 Jest test suites / 182 unit tests covering: GL (service + posting),
 AR, AP, e-invoice mapper (basic + extras), UBL 2.1 validator (basic +
 extras), MyInvois HTTP client, recurring, stock, bank accounts, payments
 (customer + supplier), credit notes, debit notes, sales orders,

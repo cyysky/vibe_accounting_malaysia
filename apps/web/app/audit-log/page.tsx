@@ -101,6 +101,27 @@ export default function AuditLogPage() {
                 onChange={(e) => setSince(e.target.value)}
               />
             </label>
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              <span>Quick:</span>
+              {[
+                { label: "Today", days: 0 },
+                { label: "7d", days: 7 },
+                { label: "30d", days: 30 },
+              ].map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  className="rounded border border-slate-200 bg-white px-2 py-1 hover:bg-slate-50"
+                  onClick={() => {
+                    const d = new Date();
+                    if (p.days > 0) d.setDate(d.getDate() - p.days);
+                    setSince(d.toISOString().slice(0, 10));
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
             {(entity || action || since) && (
               <button
                 type="button"

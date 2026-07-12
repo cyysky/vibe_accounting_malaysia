@@ -150,6 +150,32 @@ describe("UBL validator: extras", () => {
     expect(result.warnings.some((w) => w.path?.startsWith("AccountingSupplierParty/IndustryClassificationCode"))).toBe(true);
   });
 
+  describe("Supplier TIN format", () => {
+    it("warns when the supplier TIN is not digit-shaped", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "BROKEN-TIN-12345", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
+    });
+
+    it("accepts a properly-formatted LHDNM TIN with IG prefix", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG1234567890", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(false);
+    });
+  });
+
   describe("PaymentMeans and AdditionalDocumentReference validation", () => {
     it("warns when PaymentMeansCode is outside the recommended list", () => {
       const doc = buildUblInvoice({

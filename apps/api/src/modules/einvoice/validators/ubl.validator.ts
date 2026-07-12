@@ -510,6 +510,15 @@ function validateParty(party: Record<string, unknown>, label: string, issues: Ub
         message: 'Supplier PartyTaxScheme/CompanyID schemeID is expected to be TIN',
       });
     }
+    // LHDNM TIN format: optional 1-2 letter prefix + 8-12 digits.
+    if (value && !/^[A-Z]{0,2}[0-9]{8,12}$/.test(value)) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.format,
+        severity: 'warning',
+        path: 'Supplier/PartyTaxScheme/CompanyID',
+        message: 'Supplier TIN "' + value + '" does not match the LHDNM pattern',
+      });
+    }
   }
   if (label === 'Customer' && !party.PartyTaxScheme) {
     issues.push({

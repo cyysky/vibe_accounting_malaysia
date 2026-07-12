@@ -889,8 +889,11 @@ class ApiClient {
   deleteRecurring(id: string): Promise<void> {
     return this.request<void>('DELETE', `/recurring/${id}`);
   }
-  runRecurring(id: string): Promise<unknown> {
-    return this.request('POST', `/recurring/${id}/run`);
+  runRecurring(id: string): Promise<{ invoiceId: string; number: string }> {
+    return this.request<{ invoiceId: string; number: string }>('POST', `/recurring/${id}/run`);
+  }
+  previewRecurring(id: string, count = 5): Promise<{ data: { dates: string[] } }> {
+    return this.request('GET', `/recurring/${id}/preview`, undefined, { count });
   }
   runDueRecurring(): Promise<unknown> {
     return this.request('POST', '/recurring/run-due');

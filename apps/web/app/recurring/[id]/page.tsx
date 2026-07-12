@@ -27,17 +27,17 @@ export default function RecurringDetailPage() {
   });
   const previewQ = useQuery({
     queryKey: ["recurring-preview", id],
-    queryFn: async () => {
-      const res = await fetch("/api/recurring/" + id + "/preview?count=5", {
-        headers: { Authorization: "Bearer " + (typeof window !== "undefined" ? localStorage.getItem("token") ?? "" : "") },
-      });
-      return res.json();
-    },
+    queryFn: () => api.previewRecurring(id, 5),
   });
 
+  const [lastRun, setLastRun] = useState<{ invoiceId: string; number: string } | null>(null);
   const runOne = useMutation({
     mutationFn: () => api.runRecurring(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["recurring"] }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["recurring"] });
+      qc.invalidateQueries({ queryKey: ["audit-recurring", id] });
+      if (res && res.invoiceId) setLastRun(res);
+    },
   });
   const remove = useMutation({
     mutationFn: () => api.deleteRecurring(id),
@@ -76,6 +76,12 @@ export default function RecurringDetailPage() {
         }
       />
 
+      {lastRun && (
+        <div className="mb-4 flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <span>Generated invoice <strong>{lastRun.number}</strong>.</span>
+          <Link href={"/receivables/" + lastRun.invoiceId} className="font-medium text-emerald-700 hover:underline">Open →</Link>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Frequency" value={t.frequency} />
         <Stat label="Start date" value={fmtDate(t.startDate)} />

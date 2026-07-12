@@ -204,6 +204,12 @@ export class GlService {
     }) as unknown as Promise<Array<Record<string, unknown>>>;
   }
 
+  async getTaxCode(id: string): Promise<Record<string, unknown>> {
+    const tc = await this.prisma.taxCode.findUnique({ where: { id } });
+    if (!tc) throw new NotFoundException(`Tax code ${id} not found`);
+    return tc as unknown as Record<string, unknown>;
+  }
+
   async createTaxCode(bookId: string, dto: CreateTaxCodeDto): Promise<Record<string, unknown>> {
     const existing = await this.prisma.taxCode.findUnique({
       where: { accountBookId_code: { accountBookId: bookId, code: dto.code } },
@@ -241,6 +247,12 @@ export class GlService {
       orderBy: { year: "desc" },
     });
   }
+  async getFiscalYear(id: string) {
+    const fy = await this.prisma.fiscalYear.findUnique({ where: { id } });
+    if (!fy) throw new NotFoundException(`Fiscal year ${id} not found`);
+    return fy;
+  }
+
   async createFiscalYear(
     bookId: string,
     dto: { year: number; startDate: string; endDate: string },

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -78,7 +79,7 @@ export default function TaxCodesPage() {
         empty="No tax codes yet."
         columns={[
           { key: 'code', header: 'Code', render: (t) => <span className="font-mono text-xs">{t.code}</span> },
-          { key: 'name', header: 'Name', render: (t) => t.name },
+          { key: 'name', header: 'Name', render: (t) => <Link href={'/settings/tax-codes/' + t.id} className="font-medium text-brand-700 hover:underline">{t.name}</Link> },
           {
             key: 'rate',
             header: 'Rate',

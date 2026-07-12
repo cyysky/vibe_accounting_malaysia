@@ -7,6 +7,12 @@ import { CreateStockMovementDto } from "./dto/stock-movement.dto";
 export class StockMovementsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async get(id: string) {
+    const m = await this.prisma.stockMovement.findUnique({ where: { id }, include: { item: true } });
+    if (!m) throw new NotFoundException("Stock movement " + id + " not found");
+    return m;
+  }
+
   list(bookId: string, itemId?: string) {
     return this.prisma.stockMovement.findMany({
       where: { accountBookId: bookId, ...(itemId ? { itemId } : {}) },

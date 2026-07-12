@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { StockMovementsService } from "./stock-movements.service";
 import { CreateStockMovementDto } from "./dto/stock-movement.dto";
@@ -12,6 +12,11 @@ import type { AuthUser } from "@account/shared";
 @Controller("stock/movements")
 export class StockMovementsController {
   constructor(private readonly svc: StockMovementsService) {}
+
+  @Get(":id")
+  get(@Param("id") id: string) {
+    return this.svc.get(id);
+  }
 
   @Get()
   list(@CurrentUser() user: AuthUser, @Query("itemId") itemId?: string) {

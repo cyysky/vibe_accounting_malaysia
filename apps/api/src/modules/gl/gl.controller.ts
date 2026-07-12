@@ -139,6 +139,11 @@ export class GlController {
     return this.svc.listFiscalYears(this.bookIdOrThrow(user));
   }
 
+  @Get("fiscal-years/:id")
+  fiscalYear(@Param("id") id: string) {
+    return this.svc.getFiscalYear(id);
+  }
+
   @Post("fiscal-years")
   createFiscalYear(
     @CurrentUser() user: AuthUser,

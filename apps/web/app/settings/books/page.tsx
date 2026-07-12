@@ -8,6 +8,7 @@ import { DataTable } from '../../../components/ui/DataTable';
 import { Modal } from '../../../components/ui/Modal';
 import { Field, Input, Badge } from '../../../components/ui/Form';
 import { useState } from 'react';
+import Link from 'next/link';
 import { Plus, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../../components/ui/PageHeader';
 
@@ -63,7 +64,7 @@ export default function AccountBooksPage() {
         empty="No account books yet."
         columns={[
           { key: 'code', header: 'Code', render: (b) => <span className="font-mono text-xs">{b.code}</span> },
-          { key: 'name', header: 'Name', render: (b) => <span className="font-medium">{b.name}</span> },
+          { key: 'name', header: 'Name', render: (b) => <Link href={'/settings/books/' + b.id} className="font-medium text-brand-700 hover:underline">{b.name}</Link> },
           { key: 'base', header: 'Base Currency', render: (b) => b.baseCurrency },
           { key: 'tin', header: 'TIN', render: (b) => b.tin ?? '—' },
           { key: 'brn', header: 'BRN', render: (b) => b.brn ?? '—' },

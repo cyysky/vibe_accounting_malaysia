@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -80,7 +81,7 @@ export default function FiscalYearsPage() {
         rowKey={(f) => f.id}
         empty="No fiscal years yet - create one to enable journal posting."
         columns={[
-          { key: 'year', header: 'Year', render: (f) => <span className="font-mono text-xs">{f.year}</span> },
+          { key: 'year', header: 'Year', render: (f) => <Link href={'/settings/fiscal-years/' + f.id} className="font-mono text-xs text-brand-700 hover:underline">{f.year}</Link> },
           { key: 'start', header: 'Start', render: (f) => f.startDate },
           { key: 'end', header: 'End', render: (f) => f.endDate },
           {

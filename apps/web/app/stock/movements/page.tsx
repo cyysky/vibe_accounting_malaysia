@@ -131,7 +131,7 @@ export default function StockMovementsPage() {
           </div>
         }
         columns={[
-          { key: "date", header: "Date", render: (r) => new Date(r.createdAt).toLocaleDateString("en-MY") },
+          { key: "date", header: "Date", render: (r) => <Link href={"/stock/movements/" + r.id} className="font-mono text-xs text-brand-700 hover:underline">{new Date(r.createdAt).toLocaleDateString("en-MY")}</Link> },
           { key: "item", header: "Item", render: (r) => r.item ? <Link href={"/stock/" + r.item.id} className="text-blue-600 hover:underline">{r.item.code} — {r.item.name}</Link> : "—" },
           { key: "type", header: "Type", render: (r) => <StatusBadge status={r.type} /> },
           { key: "quantity", header: "Qty", align: "right", render: (r) => <span className={`tabular-nums ${Number(r.quantity) > 0 ? "text-emerald-700" : "text-rose-700"}`}>{Number(r.quantity).toLocaleString("en-MY", { maximumFractionDigits: 2 })}</span> },

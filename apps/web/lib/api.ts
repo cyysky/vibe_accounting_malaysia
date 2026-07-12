@@ -401,6 +401,9 @@ class ApiClient {
   accountBooks(): Promise<AccountBook[]> {
     return this.request<AccountBook[]>('GET', '/account-books');
   }
+  getAccountBook(id: string): Promise<AccountBook> {
+    return this.request<AccountBook>('GET', `/account-books/${id}`);
+  }
 
   createAccountBook(input: Partial<AccountBook>): Promise<AccountBook> {
     return this.request<AccountBook>('POST', '/account-books', input);
@@ -709,6 +712,9 @@ class ApiClient {
   taxCodes(): Promise<TaxCode[]> {
     return this.request<TaxCode[]>('GET', '/gl/tax-codes');
   }
+  getTaxCode(id: string): Promise<TaxCode> {
+    return this.request<TaxCode>('GET', `/gl/tax-codes/${id}`);
+  }
 
   createTaxCode(input: Partial<TaxCode>): Promise<TaxCode> {
     return this.request<TaxCode>('POST', '/gl/tax-codes', input);
@@ -725,6 +731,9 @@ class ApiClient {
   // --- Fiscal years ---
   fiscalYears(): Promise<Array<{ id: string; year: number; startDate: string; endDate: string; closed: boolean }>> {
     return this.request('GET', '/gl/fiscal-years');
+  }
+  getFiscalYear(id: string): Promise<{ id: string; year: number; startDate: string; endDate: string; closed: boolean }> {
+    return this.request('GET', `/gl/fiscal-years/${id}`);
   }
 
   createFiscalYear(input: { year: number; startDate: string; endDate: string }): Promise<unknown> {
@@ -786,6 +795,9 @@ class ApiClient {
   stockMovements(itemId?: string): Promise<StockMovement[]> {
     return this.request<StockMovement[]>('GET', '/stock/movements', undefined, itemId ? { itemId } : undefined);
   }
+  getStockMovement(id: string): Promise<StockMovement> {
+    return this.request<StockMovement>('GET', `/stock/movements/${id}`);
+  }
   createStockMovement(input: { itemId: string; type: string; quantity: number; date: string; unitCost?: number; reference?: string; notes?: string }): Promise<StockMovement> {
     return this.request<StockMovement>('POST', '/stock/movements', input);
   }
@@ -838,6 +850,9 @@ class ApiClient {
   // --- Bank accounts ---
   bankAccounts(): Promise<BankAccount[]> {
     return this.request<BankAccount[]>('GET', '/bank-accounts');
+  }
+  getBankAccount(id: string): Promise<BankAccount> {
+    return this.request<BankAccount>('GET', `/bank-accounts/${id}`);
   }
   createBankAccount(input: Partial<BankAccount>): Promise<BankAccount> {
     return this.request<BankAccount>('POST', '/bank-accounts', input);

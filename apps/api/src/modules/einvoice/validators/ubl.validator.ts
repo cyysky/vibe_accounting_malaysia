@@ -1,6 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
 import type { UblDocument } from '../mappers/invoice-v1.1.mapper';
-
 /**
  * MyInvois UBL 2.1 pre-submission validator.
  *
@@ -21,7 +20,6 @@ export interface UblValidationIssue {
   path?: string;
   severity: 'error' | 'warning';
 }
-
 export interface UblValidationResult {
   valid: boolean;
   documentHash: string;
@@ -31,13 +29,12 @@ export interface UblValidationResult {
   warnings: UblValidationIssue[];
   summary: { errors: number; warnings: number };
 }
-
 const REQUIRED_TAX_TYPE_CODES = ['01', '02', '03', '04', '05', '06', 'E'] as const;
 type TaxTypeCode = (typeof REQUIRED_TAX_TYPE_CODES)[number];
 
+const PAYMENT_MEANS_CODES = new Set(["01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","77","78","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","94","95","96","97","98","99"]);
 const isTaxTypeCode = (code: unknown): code is TaxTypeCode =>
   typeof code === 'string' && (REQUIRED_TAX_TYPE_CODES as readonly string[]).includes(code);
-
 const SAFE_ISSUE_CODES = {
   required: 'REQUIRED',
   format: 'FORMAT',
@@ -47,12 +44,10 @@ const SAFE_ISSUE_CODES = {
   amount: 'AMOUNT',
   taxCode: 'TAX_TYPE_CODE',
 } as const;
-
 interface UblAmount {
   _: string;
   currencyID?: string;
 }
-
 function readAmount(node: unknown): UblAmount | undefined {
   if (!Array.isArray(node) || node.length === 0) return undefined;
   const first = node[0];
@@ -61,7 +56,6 @@ function readAmount(node: unknown): UblAmount | undefined {
   }
   return undefined;
 }
-
 function readText(node: unknown): string | undefined {
   if (!Array.isArray(node) || node.length === 0) return undefined;
   const first = node[0];
@@ -71,7 +65,6 @@ function readText(node: unknown): string | undefined {
   }
   return undefined;
 }
-
 /**
  * Validate a UBL envelope as produced by `buildUblInvoice`. This is intentionally
  * conservative: missing required fields raise errors, soft warnings are emitted
@@ -79,7 +72,6 @@ function readText(node: unknown): string | undefined {
  */
 export function validateUblDocument(doc: UblDocument): UblValidationResult {
   const issues: UblValidationIssue[] = [];
-
   if (
     !doc ||
     typeof doc !== 'object' ||
@@ -92,7 +84,6 @@ export function validateUblDocument(doc: UblDocument): UblValidationResult {
     });
     return finalize(issues, 'unknown', 'unknown', doc);
   }
-
   const wrapper = (doc.Invoice ?? doc.CreditNote ?? doc.DebitNote) as
     | Array<Record<string, unknown>>
     | undefined;
@@ -105,18 +96,15 @@ export function validateUblDocument(doc: UblDocument): UblValidationResult {
     return finalize(issues, 'unknown', 'unknown', doc);
   }
   const inner = wrapper[0];
-
   const version =
     (inner.InvoiceTypeCode as Array<{ listVersionID?: string }> | undefined)?.[0]?.listVersionID ??
     '1.1';
   const code = (inner.InvoiceTypeCode as Array<{ _?: string }> | undefined)?.[0]?._ ?? '01';
   const documentType = mapTypeCodeToName(code);
-
   requireText(inner, 'ID', issues);
   requireText(inner, 'IssueDate', issues);
   requireText(inner, 'IssueTime', issues, false);
   requireText(inner, 'DocumentCurrencyCode', issues);
-
   const monetary = inner.LegalMonetaryTotal as Array<Record<string, unknown>> | undefined;
   if (!monetary || monetary.length === 0) {
     issues.push({
@@ -193,7 +181,6 @@ export function validateUblDocument(doc: UblDocument): UblValidationResult {
       }
     }
   }
-
   const taxTotals = inner.TaxTotal as Array<Record<string, unknown>> | undefined;
   if (!taxTotals || taxTotals.length === 0) {
     issues.push({
@@ -222,7 +209,6 @@ export function validateUblDocument(doc: UblDocument): UblValidationResult {
       }
     }
   }
-
   const supplierParty = firstParty(inner.AccountingSupplierParty);
   if (!supplierParty) {
     issues.push({
@@ -245,7 +231,6 @@ export function validateUblDocument(doc: UblDocument): UblValidationResult {
       });
     }
   }
-
   const customerParty = firstParty(inner.AccountingCustomerParty);
   if (!customerParty) {
     issues.push({
@@ -257,7 +242,6 @@ export function validateUblDocument(doc: UblDocument): UblValidationResult {
   } else {
     validateParty(customerParty, 'Customer', issues);
   }
-
   const lines = (inner.InvoiceLine as Array<Record<string, unknown>> | undefined) ?? [];
   if (lines.length === 0) {
     issues.push({
@@ -356,10 +340,74 @@ export function validateUblDocument(doc: UblDocument): UblValidationResult {
       }
     }
   }
-
+  validatePaymentMeans(inner, issues);
+  validateAdditionalDocumentReferences(inner, issues);
   return finalize(issues, documentType, version, doc);
 }
-
+function validatePaymentMeans(inner: Record<string, unknown>, issues: UblValidationIssue[]) {
+  const means = inner.PaymentMeans as Array<Record<string, unknown>> | undefined;
+  if (!means || means.length === 0) return;
+  for (const [i, m] of means.entries()) {
+    const codeWrap = firstWrapper(m.PaymentMeansCode) as { _?: string } | undefined;
+    const code = codeWrap?._;
+    if (code && !PAYMENT_MEANS_CODES.has(code)) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.enum,
+        severity: "warning",
+        path: `PaymentMeans[${i}].PaymentMeansCode`,
+        message: `PaymentMeansCode "${code}" is outside the MyInvois / UN/CEFACT recommended list`,
+      });
+    }
+    const account = firstWrapper(m.PayeeFinancialAccount) as { ID?: Array<{ _?: string }> } | undefined;
+    const accountId = readText(account?.ID as never);
+    if (account && !accountId) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.required,
+        severity: "error",
+        path: `PaymentMeans[${i}].PayeeFinancialAccount.ID`,
+        message: `PayeeFinancialAccount.ID is required when PayeeFinancialAccount is set`,
+      });
+    } else if (accountId) {
+      // Lightweight format check: only digits, dashes and spaces; length 6–34.
+      const ok = /^[0-9 -]{6,34}$/.test(accountId);
+      if (!ok) {
+        issues.push({
+          code: SAFE_ISSUE_CODES.format,
+          severity: "warning",
+          path: `PaymentMeans[${i}].PayeeFinancialAccount.ID`,
+          message: `PayeeFinancialAccount.ID "${accountId}" does not look like a bank account number`,
+        });
+      }
+    }
+  }
+}
+function validateAdditionalDocumentReferences(inner: Record<string, unknown>, issues: UblValidationIssue[]) {
+  const refs = inner.AdditionalDocumentReference as Array<Record<string, unknown>> | undefined;
+  if (!refs || refs.length === 0) return;
+  const seen = new Set<string>();
+  for (const [i, ref] of refs.entries()) {
+    const id = readText(ref.ID as never);
+    if (!id) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.required,
+        severity: "error",
+        path: `AdditionalDocumentReference[${i}].ID`,
+        message: `AdditionalDocumentReference[${i}].ID is required`,
+      });
+      continue;
+    }
+    if (seen.has(id)) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.format,
+        severity: "error",
+        path: `AdditionalDocumentReference[${i}].ID`,
+        message: `AdditionalDocumentReference ID "${id}" is duplicated in the same document`,
+      });
+    } else {
+      seen.add(id);
+    }
+  }
+}
 function finalize(
   issues: UblValidationIssue[],
   documentType: string,
@@ -379,20 +427,17 @@ function finalize(
     summary: { errors, warnings },
   };
 }
-
 function firstWrapper(node: unknown): Record<string, unknown> | undefined {
   if (Array.isArray(node) && node[0] && typeof node[0] === 'object') {
     return node[0] as Record<string, unknown>;
   }
   return undefined;
 }
-
 function firstParty(node: unknown): Record<string, unknown> | undefined {
   const wrapper = firstWrapper(node);
   if (!wrapper) return undefined;
   return firstWrapper(wrapper.Party);
 }
-
 function validateParty(party: Record<string, unknown>, label: string, issues: UblValidationIssue[]) {
   const ids = party.PartyIdentification as Array<Record<string, unknown>> | undefined;
   if (!ids || ids.length === 0) {
@@ -475,7 +520,6 @@ function validateParty(party: Record<string, unknown>, label: string, issues: Ub
     });
   }
 }
-
 function requireText(
   parent: Record<string, unknown>,
   name: string,
@@ -492,7 +536,6 @@ function requireText(
     });
   }
 }
-
 function mapTypeCodeToName(code: string): string {
   const map: Record<string, string> = {
     '01': 'invoice',
@@ -505,7 +548,6 @@ function mapTypeCodeToName(code: string): string {
   };
   return map[code] ?? code;
 }
-
 function simpleHash(s: string): string {
   let h = 0;
   for (let i = 0; i < s.length; i += 1) {
@@ -513,7 +555,6 @@ function simpleHash(s: string): string {
   }
   return `val-${(h >>> 0).toString(16).padStart(8, '0')}`;
 }
-
 /**
  * Convenience: validates the UBL document and throws if any errors are
  * found. Used in unit/integration tests.

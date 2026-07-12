@@ -149,4 +149,80 @@ describe("UBL validator: extras", () => {
     const result = validateUblDocument(doc);
     expect(result.warnings.some((w) => w.path?.startsWith("AccountingSupplierParty/IndustryClassificationCode"))).toBe(true);
   });
+
+  describe("PaymentMeans and AdditionalDocumentReference validation", () => {
+    it("warns when PaymentMeansCode is outside the recommended list", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        paymentMeansCode: "ZZ",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "PaymentMeans[0].PaymentMeansCode")).toBe(true);
+    });
+
+    it("errors when PayeeFinancialAccount has no ID", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        paymentMeansCode: "03",
+      });
+      // Inject an empty ID into the PayeeFinancialAccount.
+      const inner = (doc.Invoice as Array<Record<string, unknown>>)[0];
+      const means = (inner.PaymentMeans as Array<Record<string, unknown>>)[0];
+      means.PayeeFinancialAccount = [{ ID: [{ _: "" }] }];
+      const result = validateUblDocument(doc);
+      expect(result.valid).toBe(false);
+      expect(result.issues.some((i) => i.path === "PaymentMeans[0].PayeeFinancialAccount.ID")).toBe(true);
+    });
+
+    it("warns when PayeeFinancialAccount ID is not digit-shaped", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        paymentMeansCode: "03",
+        paymentAccountNo: "MAYBE_BANK_ACCOUNT",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "PaymentMeans[0].PayeeFinancialAccount.ID")).toBe(true);
+    });
+
+    it("errors on duplicated AdditionalDocumentReference IDs", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        additionalReferences: [{ id: "FTT-2025-001" }, { id: "FTT-2025-001" }],
+      });
+      const result = validateUblDocument(doc);
+      expect(result.valid).toBe(false);
+      expect(result.issues.some((i) => i.code === "FORMAT" && i.message.includes("duplicated"))).toBe(true);
+    });
+
+    it("errors when AdditionalDocumentReference has no ID", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        additionalReferences: [{ id: "" }],
+      });
+      const result = validateUblDocument(doc);
+      expect(result.valid).toBe(false);
+      expect(result.issues.some((i) => i.path === "AdditionalDocumentReference[0].ID")).toBe(true);
+    });
+  });
+
 });

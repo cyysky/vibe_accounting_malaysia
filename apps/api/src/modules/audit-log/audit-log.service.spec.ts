@@ -59,6 +59,47 @@ describe("AuditLogService", () => {
     );
   });
 
+  it("list() forwards the action filter when provided", async () => {
+    const prisma = makePrisma();
+    prisma.auditLog.findMany.mockResolvedValue([]);
+    const svc = new AuditLogService(prisma);
+    await svc.list("B1", 100, "CustomerInvoice", "SUBMIT");
+    expect(prisma.auditLog.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          accountBookId: "B1",
+          entity: "CustomerInvoice",
+          action: "SUBMIT",
+        },
+      }),
+    );
+  });
+
+  it("list() forwards the since filter as a gte createdAt predicate", async () => {
+    const prisma = makePrisma();
+    prisma.auditLog.findMany.mockResolvedValue([]);
+    const svc = new AuditLogService(prisma);
+    const since = "2024-06-01T00:00:00.000Z";
+    await svc.list("B1", 100, undefined, undefined, since);
+    const call = prisma.auditLog.findMany.mock.calls[0][0];
+    expect(call.where.accountBookId).toBe("B1");
+    expect(call.where.createdAt).toEqual({ gte: new Date(since) });
+  });
+
+  it("list() combines entity + action + since when all are provided", async () => {
+    const prisma = makePrisma();
+    prisma.auditLog.findMany.mockResolvedValue([]);
+    const svc = new AuditLogService(prisma);
+    await svc.list("B1", 200, "JournalEntry", "POST", "2025-01-01");
+    const call = prisma.auditLog.findMany.mock.calls[0][0];
+    expect(call.where).toEqual({
+      accountBookId: "B1",
+      entity: "JournalEntry",
+      action: "POST",
+      createdAt: { gte: new Date("2025-01-01") },
+    });
+  });
+
   it("forEntity() filters by entity and entityId", async () => {
     const prisma = makePrisma();
     prisma.auditLog.findMany.mockResolvedValue([]);

@@ -9,6 +9,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 
 const ENTITIES = ["", "CustomerInvoice", "SupplierInvoice", "JournalEntry", "CustomerPayment", "SupplierPayment", "EinvoiceSubmission", "Customer", "Supplier", "Item", "User"];
+const ACTIONS = ["", "CREATE", "UPDATE", "DELETE", "POST", "SUBMIT", "CANCEL", "POLL", "PAY"];
 
 function entityHref(entity: string, entityId: string): string | null {
   switch (entity) {
@@ -45,11 +46,21 @@ function actionColor(a: string) {
   return "DRAFT";
 }
 
+function buildExportHref(entity: string, action: string, since: string): string {
+  const params: string[] = [];
+  if (entity) params.push("entity=" + encodeURIComponent(entity));
+  if (action) params.push("action=" + encodeURIComponent(action));
+  if (since) params.push("since=" + encodeURIComponent(since));
+  return params.length ? "/api/audit-log/export.csv?" + params.join("&") : "/api/audit-log/export.csv";
+}
+
 export default function AuditLogPage() {
   const [entity, setEntity] = useState("");
+  const [action, setAction] = useState("");
+  const [since, setSince] = useState("");
   const q = useQuery({
-    queryKey: ["auditLog", entity],
-    queryFn: () => api.auditLog(200, entity || undefined),
+    queryKey: ["auditLog", entity, action, since],
+    queryFn: () => api.auditLog(200, entity || undefined, action || undefined, since || undefined),
   });
 
   return (
@@ -59,13 +70,50 @@ export default function AuditLogPage() {
         description="Audit trail of every change in the system."
         breadcrumbs={[{ label: "Activity" }]}
         actions={
-          <div className="flex items-center gap-2">
-            <select className="rounded-md border px-3 py-2 text-sm" value={entity} onChange={(e) => setEntity(e.target.value)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Filter by entity"
+              className="rounded-md border px-3 py-2 text-sm"
+              value={entity}
+              onChange={(e) => setEntity(e.target.value)}
+            >
               {ENTITIES.map((e) => (
                 <option key={e} value={e}>{e || "All entities"}</option>
               ))}
             </select>
-            <a className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-2 text-sm hover:bg-slate-50" href={`/api/audit-log/export.csv${entity ? `?entity=${encodeURIComponent(entity)}` : ''}`}>
+            <select
+              aria-label="Filter by action"
+              className="rounded-md border px-3 py-2 text-sm"
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+            >
+              {ACTIONS.map((a) => (
+                <option key={a} value={a}>{a || "All actions"}</option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              Since
+              <input
+                type="date"
+                aria-label="Filter since date"
+                className="rounded-md border px-2 py-2 text-sm"
+                value={since}
+                onChange={(e) => setSince(e.target.value)}
+              />
+            </label>
+            {(entity || action || since) && (
+              <button
+                type="button"
+                className="rounded-md border bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                onClick={() => { setEntity(""); setAction(""); setSince(""); }}
+              >
+                Clear
+              </button>
+            )}
+            <a
+              className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-2 text-sm hover:bg-slate-50"
+              href={buildExportHref(entity, action, since)}
+            >
               <Download className="h-3.5 w-3.5" /> Export CSV
             </a>
           </div>

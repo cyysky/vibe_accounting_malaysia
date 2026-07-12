@@ -34,9 +34,13 @@ export class AuditLogService {
     }
   }
 
-  list(bookId: string, limit = 100, entity?: string) {
+  list(bookId: string, limit = 100, entity?: string, action?: string, since?: string) {
+    const where: Record<string, unknown> = { accountBookId: bookId };
+    if (entity) where.entity = entity;
+    if (action) where.action = action;
+    if (since) where.createdAt = { gte: new Date(since) };
     return this.prisma.auditLog.findMany({
-      where: { accountBookId: bookId, ...(entity ? { entity } : {}) },
+      where,
       include: { user: { select: { id: true, email: true, name: true } } },
       orderBy: { createdAt: "desc" },
       take: Math.min(500, Math.max(1, limit)),

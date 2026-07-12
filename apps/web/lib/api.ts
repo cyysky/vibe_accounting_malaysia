@@ -877,8 +877,8 @@ class ApiClient {
   }
 
   // --- Audit log ---
-  auditLog(limit = 100, entity?: string): Promise<AuditLogEntry[]> {
-    return this.request<AuditLogEntry[]>('GET', '/audit-log', undefined, { limit, entity });
+  auditLog(limit = 100, entity?: string, action?: string, since?: string): Promise<AuditLogEntry[]> {
+    return this.request<AuditLogEntry[]>('GET', '/audit-log', undefined, { limit, entity, action, since });
   }
   auditLogFor(entity: string, entityId: string): Promise<AuditLogEntry[]> {
     return this.request<AuditLogEntry[]>('GET', `/audit-log/${entity}/${entityId}`);

@@ -18,9 +18,11 @@ export class AuditLogController {
     @CurrentUser() user: AuthUser,
     @Query("limit") limit?: string,
     @Query("entity") entity?: string,
+    @Query("action") action?: string,
+    @Query("since") since?: string,
   ) {
     if (!user.accountBookId) throw new Error("User has no account book");
-    return this.svc.list(user.accountBookId, Number(limit ?? 100), entity);
+    return this.svc.list(user.accountBookId, Number(limit ?? 100), entity, action, since);
   }
 
   @Get("export.csv")
@@ -31,12 +33,16 @@ export class AuditLogController {
     @Res() res: Response,
     @Query("limit") limit?: string,
     @Query("entity") entity?: string,
+    @Query("action") action?: string,
+    @Query("since") since?: string,
   ) {
     if (!user.accountBookId) throw new Error("User has no account book");
     const rows = await this.svc.list(
       user.accountBookId,
       Math.min(2000, Number(limit ?? 1000)),
       entity,
+      action,
+      since,
     );
     const header = ["id", "createdAt", "action", "entity", "entityId", "user", "message"];
     const lines = [header.join(",")];

@@ -120,7 +120,18 @@ export default function AuditLogPage() {
         }
       />
       {q.isLoading ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <ol className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <li key={i} className="flex items-start gap-3 rounded-md border bg-white p-3">
+              <div className="h-5 w-16 animate-pulse rounded bg-slate-200" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200" />
+                <div className="h-3 w-1/3 animate-pulse rounded bg-slate-100" />
+              </div>
+              <div className="h-3 w-20 animate-pulse rounded bg-slate-100" />
+            </li>
+          ))}
+        </ol>
       ) : (q.data ?? []).length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-10 text-slate-500">
           <Activity className="h-10 w-10" /> No activity yet.

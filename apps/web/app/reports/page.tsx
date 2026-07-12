@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown, Wallet, Scale, AlertCircle, FileText, Download } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Scale, AlertCircle, FileText, Download, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { api } from "../../lib/api";
 import type { AgingRow, GLLine, GLSummary } from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -97,8 +98,8 @@ export default function ReportsPage() {
       </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <AgingTable title="AR Aging (Receivables)" asOf={arAsOf} setAsOf={setArAsOf} data={arAging.data} nameKey="customerName" linkPrefix="/receivables" />
-        <AgingTable title="AP Aging (Payables)" asOf={apAsOf} setAsOf={setApAsOf} data={apAging.data} nameKey="supplierName" linkPrefix="/payables" />
+        <AgingTable title="AR Aging (Receivables)" asOf={arAsOf} setAsOf={setArAsOf} data={arAging.data} nameKey="customerName" entity="customer" />
+        <AgingTable title="AP Aging (Payables)" asOf={apAsOf} setAsOf={setApAsOf} data={apAging.data} nameKey="supplierName" entity="supplier" />
       </div>
 
       <section>
@@ -172,15 +173,18 @@ export default function ReportsPage() {
 }
 
 function AgingTable({
-  title, asOf, setAsOf, data, nameKey, linkPrefix,
+  title, asOf, setAsOf, data, nameKey, entity,
 }: {
   title: string;
   asOf: string;
   setAsOf: (s: string) => void;
   data: { asOf: string; rows: AgingRow[]; totals: AgingRow["buckets"] } | undefined;
   nameKey: "customerName" | "supplierName";
-  linkPrefix: string;
+  entity: "customer" | "supplier";
 }) {
+  const filterParam = entity === "customer" ? "customerId" : "supplierId";
+  const listHref = entity === "customer" ? "/receivables" : "/payables";
+  const detailHref = entity === "customer" ? "/receivables/" : "/payables/";
   return (
     <section>
       <div className="mb-2 flex items-end justify-between">
@@ -201,17 +205,37 @@ function AgingTable({
             </tr>
           </thead>
           <tbody>
-            {(data?.rows ?? []).map((r, idx) => (
-              <tr key={idx} className="border-t">
-                <td className="px-3 py-2">{(r as unknown as Record<string, unknown>)[nameKey] as string}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.current)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d1_30)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d31_60)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d61_90)}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-rose-700">{fmt(r.buckets.d90_plus)}</td>
-                <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(r.buckets.total)}</td>
-              </tr>
-            ))}
+            {(data?.rows ?? []).map((r, idx) => {
+              const name = (r as unknown as Record<string, unknown>)[nameKey] as string;
+              const entityId = (r as unknown as Record<string, unknown>)[entity === "customer" ? "customerId" : "supplierId"] as string | undefined;
+              const entityHref = entityId ? `${listHref}?${filterParam}=${encodeURIComponent(entityId)}` : null;
+              const worst = (r.invoices ?? []).filter((i) => i.daysOverdue >= 90)[0] ?? (r.invoices ?? []).slice().sort((a, b) => b.daysOverdue - a.daysOverdue)[0];
+              return (
+                <tr key={idx} className="border-t">
+                  <td className="px-3 py-2">
+                    {entityHref ? (
+                      <Link href={entityHref} className="font-medium text-brand-700 hover:underline">{name}</Link>
+                    ) : (
+                      <span>{name}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.current)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d1_30)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d31_60)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{fmt(r.buckets.d61_90)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {worst && worst.daysOverdue >= 90 ? (
+                      <Link href={detailHref + worst.id} className="inline-flex items-center gap-1 text-rose-700 hover:underline">
+                        {fmt(r.buckets.d90_plus)} <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    ) : (
+                      <span className="text-rose-700">{fmt(r.buckets.d90_plus)}</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums font-medium">{fmt(r.buckets.total)}</td>
+                </tr>
+              );
+            })}
             {(data?.rows ?? []).length === 0 && (
               <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-500">No outstanding balances.</td></tr>
             )}

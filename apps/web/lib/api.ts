@@ -479,8 +479,8 @@ class ApiClient {
     return this.request<Customer>('GET', '/ar/customers/' + id);
   }
 
-  customerInvoices(page = 1, pageSize = 50, customerId?: string): Promise<PaginatedResponse<CustomerInvoice>> {
-    return this.request<PaginatedResponse<CustomerInvoice>>('GET', '/ar/invoices', undefined, { page, pageSize, customerId });
+  customerInvoices(page = 1, pageSize = 50, customerId?: string, status?: string): Promise<PaginatedResponse<CustomerInvoice>> {
+    return this.request<PaginatedResponse<CustomerInvoice>>('GET', '/ar/invoices', undefined, { page, pageSize, customerId, status });
   }
 
   getInvoice(id: string): Promise<CustomerInvoice> {
@@ -519,8 +519,8 @@ class ApiClient {
   deleteSupplier(id: string): Promise<void> {
     return this.request<void>('DELETE', `/ap/suppliers/${id}`);
   }
-  supplierInvoices(page = 1, pageSize = 50, supplierId?: string): Promise<PaginatedResponse<SupplierInvoice>> {
-    return this.request<PaginatedResponse<SupplierInvoice>>('GET', '/ap/invoices', undefined, { page, pageSize, supplierId });
+  supplierInvoices(page = 1, pageSize = 50, supplierId?: string, status?: string): Promise<PaginatedResponse<SupplierInvoice>> {
+    return this.request<PaginatedResponse<SupplierInvoice>>('GET', '/ap/invoices', undefined, { page, pageSize, supplierId, status });
   }
   getSupplierInvoice(id: string): Promise<SupplierInvoice> {
     return this.request<SupplierInvoice>('GET', `/ap/invoices/${id}`);

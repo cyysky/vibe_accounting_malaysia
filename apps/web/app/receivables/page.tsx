@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,14 +35,19 @@ const customerSchema = z.object({
 });
 type CustomerForm = z.infer<typeof customerSchema>;
 
-export default function ReceivablesPage() {
+function ReceivablesPageInner() {
   const qc = useQueryClient();
   const toast = useToast();
   const [editing, setEditing] = useState<Customer | null>(null);
   const [showForm, setShowForm] = useState(false);
 
+  const searchParams = useSearchParams();
+  const customerFilter = searchParams.get('customerId') ?? '';
   const customers = useQuery({ queryKey: ['customers'], queryFn: () => api.customers() });
-  const invoices = useQuery({ queryKey: ['ar-invoices'], queryFn: () => api.customerInvoices() });
+  const invoices = useQuery({
+    queryKey: ['ar-invoices', customerFilter],
+    queryFn: () => api.customerInvoices(1, 50, customerFilter || undefined),
+  });
 
   const upsert = useMutation({
     mutationFn: (data: CustomerForm) =>
@@ -155,6 +161,14 @@ export default function ReceivablesPage() {
       </section>
 
       <section>
+        {customerFilter && (
+          <div className="mb-3 flex items-center justify-between rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-800">
+            <span>
+              Filtered by customer. Showing invoices for: <strong>{(customers.data ?? []).find((c) => c.id === customerFilter)?.name ?? customerFilter}</strong>
+            </span>
+            <a href="/receivables" className="text-brand-700 hover:underline">Clear filter</a>
+          </div>
+        )}
         <div className="mb-2 flex items-end justify-between">
           <h2 className="text-sm font-semibold text-slate-700">Invoices</h2>
           <a href="/sales/new" className="text-sm text-brand-700 hover:underline">
@@ -272,5 +286,14 @@ export default function ReceivablesPage() {
         </form>
       </Modal>
     </div>
+  );
+}
+
+
+export default function ReceivablesPage() {
+  return (
+    <Suspense fallback={null}>
+      <ReceivablesPageInner />
+    </Suspense>
   );
 }

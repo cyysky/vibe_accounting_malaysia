@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,14 +33,19 @@ const supplierSchema = z.object({
 });
 type SupplierForm = z.infer<typeof supplierSchema>;
 
-export default function PayablesPage() {
+function PayablesPageInner() {
   const qc = useQueryClient();
   const toast = useToast();
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [showForm, setShowForm] = useState(false);
 
+  const searchParams = useSearchParams();
+  const supplierFilter = searchParams.get('supplierId') ?? '';
   const suppliers = useQuery({ queryKey: ['suppliers'], queryFn: () => api.suppliers() });
-  const bills = useQuery({ queryKey: ['ap-invoices'], queryFn: () => api.supplierInvoices() });
+  const bills = useQuery({
+    queryKey: ['ap-invoices', supplierFilter],
+    queryFn: () => api.supplierInvoices(1, 50, supplierFilter || undefined),
+  });
 
   const upsert = useMutation({
     mutationFn: (data: SupplierForm) =>
@@ -141,6 +147,14 @@ export default function PayablesPage() {
       </section>
 
       <section>
+        {supplierFilter && (
+          <div className="mb-3 flex items-center justify-between rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-800">
+            <span>
+              Filtered by supplier. Showing bills for: <strong>{(suppliers.data ?? []).find((s) => s.id === supplierFilter)?.name ?? supplierFilter}</strong>
+            </span>
+            <a href="/payables" className="text-brand-700 hover:underline">Clear filter</a>
+          </div>
+        )}
         <h2 className="mb-2 text-sm font-semibold text-slate-700">Bills</h2>
         <DataTable
           data={bills.data?.data ?? []}
@@ -224,5 +238,14 @@ export default function PayablesPage() {
         </form>
       </Modal>
     </div>
+  );
+}
+
+
+export default function PayablesPage() {
+  return (
+    <Suspense fallback={null}>
+      <PayablesPageInner />
+    </Suspense>
   );
 }

@@ -130,7 +130,13 @@ export default function RecurringDetailPage() {
             <Calendar className="h-4 w-4" /> Upcoming due dates
           </div>
           <div className="p-4 text-sm">
-            {previewQ.isLoading && <p className="text-slate-400">Loading…</p>}
+            {previewQ.isLoading && (
+              <div className="space-y-2">
+                <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200" />
+              </div>
+            )}
             {!previewQ.isLoading && dates.length === 0 && (
               <p className="text-slate-500">No upcoming dates.</p>
             )}

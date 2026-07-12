@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EinvoiceEnvironment } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDate, IsEnum, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateEinvoiceConfigDto {
@@ -31,6 +31,10 @@ export class SubmitInvoiceDto {
   @ApiPropertyOptional({ default: '1.1' }) @IsOptional() @IsString() version?: string;
   @ApiPropertyOptional({ default: 'JSON' }) @IsOptional() @IsString() format?: string;
   @ApiPropertyOptional({ default: false, description: 'If true, only validate the UBL document and do not submit to MyInvois.' }) @IsOptional() @Type(() => Boolean) @IsBoolean() validateOnly?: boolean;
+  @ApiPropertyOptional({ description: 'Delivery date (MyInvois InvoicePeriod StartDate).' }) @IsOptional() @Type(() => Date) @IsDate() deliveryDate?: Date;
+  @ApiPropertyOptional({ description: 'MyInvois payment means code 01-10 (see PAYMENT_MODE_CODES).' }) @IsOptional() @IsString() paymentMeansCode?: string;
+  @ApiPropertyOptional({ description: 'Supplier bank account number for PayeeFinancialAccount.' }) @IsOptional() @IsString() paymentAccountNo?: string;
+  @ApiPropertyOptional({ description: 'FTT / withholding tax references to attach as AdditionalDocumentReference.', type: [Object] }) @IsOptional() additionalReferences?: Array<{ id: string; documentType?: string; documentDescription?: string }>;
 }
 
 export class CancelDocumentDto {

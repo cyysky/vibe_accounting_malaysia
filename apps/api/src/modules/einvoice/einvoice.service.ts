@@ -91,7 +91,18 @@ export class EinvoiceService {
    * `submitInvoice` (with validation) and the dedicated
    * `validateInvoice` endpoint.
    */
-  async buildUblInvoiceForInvoice(bookId: string, customerInvoiceId: string, version: '1.0' | '1.1', format: 'JSON' | 'XML') {
+  async buildUblInvoiceForInvoice(
+    bookId: string,
+    customerInvoiceId: string,
+    version: '1.0' | '1.1',
+    format: 'JSON' | 'XML',
+    extra?: {
+      deliveryDate?: Date | null;
+      paymentMeansCode?: string | null;
+      paymentAccountNo?: string | null;
+      additionalReferences?: Array<{ id: string; documentType?: string; documentDescription?: string }>;
+    },
+  ) {
     const invoice = await this.prisma.customerInvoice.findUnique({
       where: { id: customerInvoiceId },
       include: { lines: { include: { item: true, taxCode: true } }, customer: true },
@@ -110,6 +121,10 @@ export class EinvoiceService {
       taxCodes,
       version,
       format,
+      deliveryDate: extra?.deliveryDate ?? null,
+      paymentMeansCode: extra?.paymentMeansCode ?? null,
+      paymentAccountNo: extra?.paymentAccountNo ?? null,
+      additionalReferences: extra?.additionalReferences,
     }) as UblDocument;
   }
 
@@ -140,7 +155,12 @@ export class EinvoiceService {
       throw new NotFoundException(`Invoice ${invoiceId} not found in this account book`);
     }
     const v = (opts.version ?? '1.1') as '1.1' | '1.0';
-    const ubl = await this.buildUblInvoiceForInvoice(bookId, invoiceId, v, (opts.format ?? 'JSON') as 'JSON' | 'XML');
+    const ubl = await this.buildUblInvoiceForInvoice(bookId, invoiceId, v, (opts.format ?? 'JSON') as 'JSON' | 'XML', {
+      deliveryDate: opts.deliveryDate,
+      paymentMeansCode: opts.paymentMeansCode,
+      paymentAccountNo: opts.paymentAccountNo,
+      additionalReferences: opts.additionalReferences,
+    });
     return validateUblDocument(ubl);
   }
 
@@ -154,7 +174,12 @@ export class EinvoiceService {
     }
     const { cfg } = await this.resolveSupplier(bookId);
     const v = (opts.version ?? '1.1') as '1.1' | '1.0';
-    const ublDoc = await this.buildUblInvoiceForInvoice(bookId, invoiceId, v, (opts.format ?? 'JSON') as 'JSON' | 'XML');
+    const ublDoc = await this.buildUblInvoiceForInvoice(bookId, invoiceId, v, (opts.format ?? 'JSON') as 'JSON' | 'XML', {
+      deliveryDate: opts.deliveryDate,
+      paymentMeansCode: opts.paymentMeansCode,
+      paymentAccountNo: opts.paymentAccountNo,
+      additionalReferences: opts.additionalReferences,
+    });
     const validation = validateUblDocument(ublDoc);
     if (opts.validateOnly) {
       return {

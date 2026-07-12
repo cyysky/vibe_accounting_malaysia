@@ -148,4 +148,101 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
     });
   });
 
+  describe("InvoicePeriod (delivery date)", () => {
+    it("emits InvoicePeriod StartDate when deliveryDate is provided", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        deliveryDate: new Date("2025-01-20T00:00:00Z"),
+      });
+      const ubl = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
+      const period = ubl.InvoicePeriod as Array<Record<string, unknown>>;
+      expect(period).toBeDefined();
+      expect(period[0].StartDate).toEqual([{ _: "2025-01-20" }]);
+    });
+    it("omits InvoicePeriod when deliveryDate is null/undefined", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+      });
+      const ubl = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
+      expect(ubl.InvoicePeriod).toBeUndefined();
+    });
+  });
+
+  describe("PaymentMeans with PayeeFinancialAccount", () => {
+    it("emits PaymentMeansCode alone when no account number is provided", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        paymentMeansCode: "03",
+      });
+      const ubl = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
+      const means = ubl.PaymentMeans as Array<Record<string, unknown>>;
+      expect(means[0].PaymentMeansCode).toEqual([{ _: "03" }]);
+      expect(means[0].PayeeFinancialAccount).toBeUndefined();
+    });
+    it("emits PayeeFinancialAccount when paymentAccountNo is set", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        paymentMeansCode: "03",
+        paymentAccountNo: "1234567890",
+      });
+      const ubl = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
+      const means = ubl.PaymentMeans as Array<Record<string, unknown>>;
+      const acct = means[0].PayeeFinancialAccount as Array<Record<string, unknown>>;
+      expect(acct[0].ID).toEqual([{ _: "1234567890" }]);
+    });
+  });
+
+  describe("AdditionalDocumentReference (FTT / WHT)", () => {
+    it("emits one AdditionalDocumentReference per entry", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        additionalReferences: [
+          { id: "FTT-2025-001", documentType: "FTT", documentDescription: "Tourism tax reference" },
+          { id: "WHT-2025-007" },
+        ],
+      });
+      const ubl = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
+      const refs = ubl.AdditionalDocumentReference as Array<Record<string, unknown>>;
+      expect(refs).toHaveLength(2);
+      expect(refs[0].ID).toEqual([{ _: "FTT-2025-001" }]);
+      expect(refs[0].DocumentType).toBe("FTT");
+      expect((refs[0].DocumentDescription as Array<{ _: string }>)[0]._).toBe("Tourism tax reference");
+      expect(refs[1].ID).toEqual([{ _: "WHT-2025-007" }]);
+      expect(refs[1].DocumentType).toBeUndefined();
+      expect(refs[1].DocumentDescription).toBeUndefined();
+    });
+    it("omits AdditionalDocumentReference when array is empty", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+        additionalReferences: [],
+      });
+      const ubl = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
+      expect(ubl.AdditionalDocumentReference).toBeUndefined();
+    });
+  });
+
 });

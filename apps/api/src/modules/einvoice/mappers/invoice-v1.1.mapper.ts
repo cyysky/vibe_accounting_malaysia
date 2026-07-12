@@ -53,6 +53,14 @@ export interface MapperContext {
   version?: "1.0" | "1.1";
   format?: "JSON" | "XML";
   billingReferenceId?: string;
+  /** Optional delivery date (MyInvois InvoicePeriod StartDate). */
+  deliveryDate?: Date | null;
+  /** Payment means code per MyInvois (01-10); see PAYMENT_MODE_CODES. */
+  paymentMeansCode?: string | null;
+  /** Supplier bank account number for PayeeFinancialAccount. */
+  paymentAccountNo?: string | null;
+  /** Free-text FTT / withholding tax references to attach as AdditionalDocumentReference. */
+  additionalReferences?: Array<{ id: string; documentType?: string; documentDescription?: string }>;
 }
 
 const COUNTRY_MY = "MYS";
@@ -210,6 +218,28 @@ export function buildUblInvoice(ctx: MapperContext): UblDocument {
     (document as Record<string, unknown>).BillingReference = [
       { InvoiceDocumentReference: [{ ID: [{ _: ctx.billingReferenceId }] }] },
     ];
+  }
+
+  if (ctx.deliveryDate) {
+    (document as Record<string, unknown>).InvoicePeriod = [
+      { StartDate: [{ _: ctx.deliveryDate.toISOString().slice(0, 10) }] },
+    ];
+  }
+
+  if (ctx.paymentMeansCode) {
+    const means: UblDocument = { PaymentMeansCode: [{ _: ctx.paymentMeansCode }] };
+    if (ctx.paymentAccountNo) {
+      (means as Record<string, unknown>).PayeeFinancialAccount = [{ ID: [{ _: ctx.paymentAccountNo }] }];
+    }
+    (document as Record<string, unknown>).PaymentMeans = [means];
+  }
+
+  if (ctx.additionalReferences && ctx.additionalReferences.length > 0) {
+    (document as Record<string, unknown>).AdditionalDocumentReference = ctx.additionalReferences.map((r) => ({
+      ID: [{ _: r.id }],
+      ...(r.documentType ? { DocumentType: r.documentType } : {}),
+      ...(r.documentDescription ? { DocumentDescription: [{ _: r.documentDescription }] } : {}),
+    }));
   }
 
   (document as Record<string, unknown>).AccountingSupplierParty = [buildSupplier(ctx.supplier)];

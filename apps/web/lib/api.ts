@@ -2,6 +2,7 @@ import type {
   AuthResponse,
   LoginRequest,
 } from '@account/shared';
+import { joinUrl } from './url';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api';
 
@@ -325,7 +326,7 @@ class ApiClient {
           .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
           .join('&')
       : '';
-    const res = await fetch(`${API_URL}${path}${qs}`, {
+    const res = await fetch(`${joinUrl(API_URL, path)}${qs}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
@@ -382,7 +383,7 @@ class ApiClient {
   }
 
   exportCsv(path: string): void {
-    const url = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api') + path;
+    const url = joinUrl(process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080/api', path);
     fetch(url, { headers: this.token ? { Authorization: `Bearer ${this.token}` } : {} })
       .then((r) => r.blob())
       .then((blob) => {
@@ -443,11 +444,11 @@ class ApiClient {
   }
 
   getJournal(id: string): Promise<JournalEntry> {
-    return this.request<JournalEntry>('GET', `gl/journals/${id}`);
+    return this.request<JournalEntry>('GET', `/gl/journals/${id}`);
   }
 
   reverseJournal(id: string, reason?: string): Promise<JournalEntry> {
-    return this.request<JournalEntry>('POST', `gl/journals/${id}/reverse`, { reason });
+    return this.request<JournalEntry>('POST', `/gl/journals/${id}/reverse`, { reason });
   }
 
   trialBalance(asOf?: string): Promise<Array<{ account: Account; debit: number; credit: number }>> {

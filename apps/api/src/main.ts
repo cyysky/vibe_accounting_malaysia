@@ -20,8 +20,8 @@ async function bootstrap(): Promise<void> {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  app.useGlobalInterceptors(new TransformInterceptor());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.useGlobalInterceptors(new TransformInterceptor());
 
   const swagger = new DocumentBuilder()
     .setTitle('Vibe Accounting Malaysia API')

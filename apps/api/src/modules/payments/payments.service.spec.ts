@@ -76,7 +76,23 @@ describe("PaymentsService (customer)", () => {
     ).rejects.toThrow(/exceeds invoice/);
   });
 
-  it("creates a customer payment and applies it (partial -> PARTIAL)", async () => {
+  it("rejects duplicate invoiceId in the same customer payment", async () => {
+    const prisma = makePrisma();
+    prisma.customer.findUnique.mockResolvedValue({ id: "c1", accountBookId: "B1" });
+    prisma.customerInvoice.findUnique.mockResolvedValue({ id: "i1", accountBookId: "B1", number: "INV-1", total: 200, paid: 0 });
+    const svc = new PaymentsService(prisma, makeSeq(), makePosting());
+    await expect(
+      svc.createCustomerPayment("B1", {
+        customerId: "c1",
+        date: "2025-01-01",
+        amount: 120,
+        method: "BANK",
+        applications: [{ invoiceId: "i1", amount: 60 }, { invoiceId: "i1", amount: 60 }],
+      } as never),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+    it("creates a customer payment and applies it (partial -> PARTIAL)", async () => {
     const prisma = makePrisma();
     prisma.customer.findUnique.mockResolvedValue({ id: "c1", accountBookId: "B1" });
     prisma.customerInvoice.findUnique
@@ -181,7 +197,23 @@ describe("PaymentsService (supplier)", () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it("creates a supplier payment and posts GL (best-effort)", async () => {
+  it("rejects duplicate bill id in the same supplier payment", async () => {
+    const prisma = makePrisma();
+    prisma.supplier.findUnique.mockResolvedValue({ id: "s1", accountBookId: "B1" });
+    prisma.supplierInvoice.findUnique.mockResolvedValue({ id: "i1", accountBookId: "B1", number: "BIL-1", total: 200, paid: 0 });
+    const svc = new PaymentsService(prisma, makeSeq(), makePosting());
+    await expect(
+      svc.createSupplierPayment("B1", {
+        supplierId: "s1",
+        date: "2025-01-01",
+        amount: 100,
+        method: "BANK",
+        applications: [{ invoiceId: "i1", amount: 50 }, { invoiceId: "i1", amount: 50 }],
+      } as never),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+    it("creates a supplier payment and posts GL (best-effort)", async () => {
     const prisma = makePrisma();
     prisma.supplier.findUnique.mockResolvedValue({ id: "s1", accountBookId: "B1" });
     prisma.supplierInvoice.findUnique

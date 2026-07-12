@@ -48,7 +48,12 @@ export class PaymentsService {
         );
       }
       applied = new Prisma.Decimal(sum);
+      const seenCust = new Set<string>();
       for (const a of apps) {
+        if (seenCust.has(a.invoiceId)) {
+          throw new BadRequestException("Duplicate application to invoice " + a.invoiceId + " in the same payment");
+        }
+        seenCust.add(a.invoiceId);
         const inv = await this.prisma.customerInvoice.findUnique({ where: { id: a.invoiceId } });
         if (!inv || inv.accountBookId !== bookId) {
           throw new NotFoundException("Invoice " + a.invoiceId + " not found in this account book");
@@ -162,7 +167,12 @@ export class PaymentsService {
         );
       }
       applied = new Prisma.Decimal(sum);
+      const seenSupp = new Set<string>();
       for (const a of apps) {
+        if (seenSupp.has(a.invoiceId)) {
+          throw new BadRequestException("Duplicate application to bill " + a.invoiceId + " in the same payment");
+        }
+        seenSupp.add(a.invoiceId);
         const inv = await this.prisma.supplierInvoice.findUnique({ where: { id: a.invoiceId } });
         if (!inv || inv.accountBookId !== bookId) {
           throw new NotFoundException("Invoice " + a.invoiceId + " not found in this account book");

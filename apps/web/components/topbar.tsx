@@ -8,13 +8,19 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import type { AuthUser } from '../lib/api';
 
+
 type SearchHit =
   | { kind: 'customer'; id: string; label: string; sub?: string; href: string }
   | { kind: 'supplier'; id: string; label: string; sub?: string; href: string }
   | { kind: 'item'; id: string; label: string; sub?: string; href: string }
   | { kind: 'invoice'; id: string; label: string; sub?: string; href: string }
   | { kind: 'bill'; id: string; label: string; sub?: string; href: string }
-  | { kind: 'journal'; id: string; label: string; sub?: string; href: string };
+  | { kind: 'journal'; id: string; label: string; sub?: string; href: string }
+  | { kind: 'creditNote'; id: string; label: string; sub?: string; href: string }
+  | { kind: 'debitNote'; id: string; label: string; sub?: string; href: string }
+  | { kind: 'salesOrder'; id: string; label: string; sub?: string; href: string }
+  | { kind: 'purchaseOrder'; id: string; label: string; sub?: string; href: string }
+  | { kind: 'bankAccount'; id: string; label: string; sub?: string; href: string };
 
 interface SearchResults {
   customers: Array<{ id: string; name: string; code: string }>;
@@ -23,6 +29,11 @@ interface SearchResults {
   invoices: Array<{ id: string; number: string; customer: { name: string } }>;
   bills: Array<{ id: string; number: string; supplier: { name: string } }>;
   journals: Array<{ id: string; number: string; description?: string | null }>;
+  creditNotes: Array<{ id: string; number: string; reason?: string | null }>;
+  debitNotes: Array<{ id: string; number: string; reason?: string | null }>;
+  salesOrders: Array<{ id: string; number: string }>;
+  purchaseOrders: Array<{ id: string; number: string }>;
+  bankAccounts: Array<{ id: string; name: string; bankName?: string | null }>;
 }
 
 export function Topbar() {
@@ -96,6 +107,21 @@ export function Topbar() {
     for (const j of r.journals) {
       out.push({ kind: 'journal', id: j.id, label: j.number, sub: j.description ?? undefined, href: `/dashboard/journal/${j.id}` });
     }
+    for (const cn of r.creditNotes ?? []) {
+      out.push({ kind: 'creditNote', id: cn.id, label: cn.number, sub: cn.reason ?? undefined, href: `/receivables/credit-notes/${cn.id}` });
+    }
+    for (const dn of r.debitNotes ?? []) {
+      out.push({ kind: 'debitNote', id: dn.id, label: dn.number, sub: dn.reason ?? undefined, href: `/payables/debit-notes/${dn.id}` });
+    }
+    for (const so of r.salesOrders ?? []) {
+      out.push({ kind: 'salesOrder', id: so.id, label: so.number, href: `/sales/${so.id}` });
+    }
+    for (const po of r.purchaseOrders ?? []) {
+      out.push({ kind: 'purchaseOrder', id: po.id, label: po.number, href: `/purchase/${po.id}` });
+    }
+    for (const ba of r.bankAccounts ?? []) {
+      out.push({ kind: 'bankAccount', id: ba.id, label: ba.name, sub: ba.bankName ?? undefined, href: `/settings/bank-accounts/${ba.id}` });
+    }
     return out;
   })();
 
@@ -143,24 +169,46 @@ export function Topbar() {
               )}
               {results.length > 0 && (
                 <ul className="divide-y">
-                  {results.map((hit, idx) => (
-                    <li key={`${hit.kind}-${hit.id}-${idx}`}>
-                      <Link
-                        href={hit.href}
-                        onClick={() => {
-                          setSearchOpen(false);
-                          setSearchTerm('');
-                        }}
-                        className={'flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 ' + (idx === activeIdx ? 'bg-brand-50' : '')}
-                      >
-                        <div className="min-w-0">
-                          <div className="truncate font-medium text-slate-900">{hit.label}</div>
-                          {hit.sub && <div className="truncate text-xs text-slate-500">{hit.sub}</div>}
-                        </div>
-                        <span className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-[10px] uppercase text-slate-500">{hit.kind}</span>
-                      </Link>
-                    </li>
-                  ))}
+                  {results.map((hit, idx) => {
+                    const prev = idx === 0 ? null : results[idx - 1];
+                    const showHeader = !prev || prev.kind !== hit.kind;
+                    const headerLabel: Record<SearchHit['kind'], string> = {
+                      customer: 'Customers',
+                      supplier: 'Suppliers',
+                      item: 'Items',
+                      invoice: 'Invoices',
+                      bill: 'Bills',
+                      journal: 'Journals',
+                      creditNote: 'Credit Notes',
+                      debitNote: 'Debit Notes',
+                      salesOrder: 'Sales Orders',
+                      purchaseOrder: 'Purchase Orders',
+                      bankAccount: 'Bank Accounts',
+                    };
+                    return (
+                      <li key={`${hit.kind}-${hit.id}-${idx}`}>
+                        {showHeader && (
+                          <div className="bg-slate-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                            {headerLabel[hit.kind]}
+                          </div>
+                        )}
+                        <Link
+                          href={hit.href}
+                          onClick={() => {
+                            setSearchOpen(false);
+                            setSearchTerm('');
+                          }}
+                          className={'flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 ' + (idx === activeIdx ? 'bg-brand-50' : '')}
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-slate-900">{hit.label}</div>
+                            {hit.sub && <div className="truncate text-xs text-slate-500">{hit.sub}</div>}
+                          </div>
+                          <span className="ml-2 rounded bg-slate-100 px-2 py-0.5 text-[10px] uppercase text-slate-500">{hit.kind}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

@@ -633,6 +633,11 @@ class ApiClient {
     invoices: Array<{ id: string; number: string; customer: { name: string } }>;
     bills: Array<{ id: string; number: string; supplier: { name: string } }>;
     journals: Array<{ id: string; number: string; description?: string | null }>;
+    creditNotes: Array<{ id: string; number: string; reason?: string | null }>;
+    debitNotes: Array<{ id: string; number: string; reason?: string | null }>;
+    salesOrders: Array<{ id: string; number: string }>;
+    purchaseOrders: Array<{ id: string; number: string }>;
+    bankAccounts: Array<{ id: string; name: string; bankName?: string | null }>;
   }> {
     return this.request('GET', '/dashboard/search', undefined, { q });
   }

@@ -48,4 +48,36 @@ describe("CreditNotesService", () => {
     const svc = new CreditNotesService(prisma, makeSeq(), makePosting());
     await expect(svc.remove("x")).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it("get(id) returns the credit note with relations", async () => {
+    const prisma = makePrisma();
+    const full = { id: "cn1", number: "CN-1", customer: { id: "c1" }, invoice: null, lines: [] };
+    prisma.creditNote.findUnique.mockResolvedValue(full);
+    const svc = new CreditNotesService(prisma, makeSeq(), makePosting());
+    await expect(svc.get("cn1")).resolves.toEqual(full);
+    expect(prisma.creditNote.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "cn1" } }),
+    );
+  });
+
+  it("get(id) throws NotFound when the credit note does not exist", async () => {
+    const prisma = makePrisma();
+    prisma.creditNote.findUnique.mockResolvedValue(null);
+    const svc = new CreditNotesService(prisma, makeSeq(), makePosting());
+    await expect(svc.get("missing")).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("list() filters by accountBook and optional customerId", async () => {
+    const prisma = makePrisma();
+    prisma.creditNote.findMany.mockResolvedValue([]);
+    const svc = new CreditNotesService(prisma, makeSeq(), makePosting());
+    await svc.list("B1");
+    expect(prisma.creditNote.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { accountBookId: "B1" } }),
+    );
+    await svc.list("B1", "c1");
+    expect(prisma.creditNote.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { accountBookId: "B1", customerId: "c1" } }),
+    );
+  });
 });

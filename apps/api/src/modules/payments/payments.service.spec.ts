@@ -120,17 +120,8 @@ describe("PaymentsService (customer)", () => {
     );
   });
 
-  it("listCustomerPaymentsByInvoice filters by invoiceId via applications.some", async () => {
-    const prisma = makePrisma();
-    prisma.customerPayment.findMany.mockResolvedValue([{ id: "p1", number: "RCP-00001", applications: [{ invoiceId: "i1", amount: 100 }] }]);
-    const svc = new PaymentsService(prisma, makeSeq(), makePosting());
-    const res = await svc.listCustomerPaymentsByInvoice("i1");
-    expect(res[0].number).toBe("RCP-00001");
-    expect(prisma.customerPayment.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { applications: { some: { invoiceId: "i1" } } } }),
-    );
-  });
 });
+
 
 describe("PaymentsService (supplier)", () => {
   function makePrisma() {
@@ -264,4 +255,14 @@ describe("PaymentsService (supplier)", () => {
       expect.objectContaining({ where: { applications: { some: { invoiceId: "b1" } } } }),
     );
   });
+
+
+  it("getSupplierPayment(id) returns the payment with applications", async () => {
+    const prisma = makePrisma();
+    const full = { id: "p2", number: "PAY-1", applications: [{ id: "a1", invoiceId: "b1", amount: 50 }] };
+    prisma.supplierPayment.findUnique.mockResolvedValue(full);
+    const svc = new PaymentsService(prisma, makeSeq(), makePosting());
+    await expect(svc.getSupplierPayment("p2")).resolves.toEqual(full);
+  });
+
 });

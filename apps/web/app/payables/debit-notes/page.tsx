@@ -206,7 +206,7 @@ export default function DebitNotesPage() {
           </div>
         }
         columns={[
-          { key: "number", header: "Number", render: (r) => <span className="font-mono">{r.number}</span> },
+          { key: "number", header: "Number", render: (r) => <a href={"/payables/debit-notes/" + r.id} className="font-mono text-brand-700 hover:underline">{r.number}</a> },
           { key: "date", header: "Date" },
           { key: "supplier", header: "Supplier", render: (r) => r.supplier?.name ?? "-" },
           { key: "bill", header: "Bill", render: (r) => r.invoice ? <a href={'/payables/' + r.invoice.id} className="font-mono text-xs text-brand-700 hover:underline">{r.invoice.number}</a> : "—" },

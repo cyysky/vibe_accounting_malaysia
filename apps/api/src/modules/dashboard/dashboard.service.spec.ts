@@ -13,6 +13,8 @@ function makePrisma() {
     salesOrder: { findMany: jest.fn() },
     purchaseOrder: { findMany: jest.fn() },
     bankAccount: { findMany: jest.fn() },
+    customerPayment: { findMany: jest.fn() },
+    supplierPayment: { findMany: jest.fn() },
     einvoiceSubmission: { findMany: jest.fn() },
     account: { findMany: jest.fn() },
   };
@@ -131,6 +133,8 @@ describe('DashboardService', () => {
       prisma.salesOrder.findMany.mockResolvedValue([]);
       prisma.purchaseOrder.findMany.mockResolvedValue([]);
       prisma.bankAccount.findMany.mockResolvedValue([]);
+      prisma.customerPayment.findMany.mockResolvedValue([]);
+      prisma.supplierPayment.findMany.mockResolvedValue([]);
       const svc = new DashboardService(prisma as never);
       const out = await svc.search('book-1', 'acme');
       expect(out.customers).toHaveLength(1);

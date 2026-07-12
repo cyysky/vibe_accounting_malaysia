@@ -20,7 +20,9 @@ type SearchHit =
   | { kind: 'debitNote'; id: string; label: string; sub?: string; href: string }
   | { kind: 'salesOrder'; id: string; label: string; sub?: string; href: string }
   | { kind: 'purchaseOrder'; id: string; label: string; sub?: string; href: string }
-  | { kind: 'bankAccount'; id: string; label: string; sub?: string; href: string };
+  | { kind: 'bankAccount'; id: string; label: string; sub?: string; href: string }
+  | { kind: 'customerPayment'; id: string; label: string; sub?: string; href: string }
+  | { kind: 'supplierPayment'; id: string; label: string; sub?: string; href: string };
 
 interface SearchResults {
   customers: Array<{ id: string; name: string; code: string }>;
@@ -34,6 +36,8 @@ interface SearchResults {
   salesOrders: Array<{ id: string; number: string }>;
   purchaseOrders: Array<{ id: string; number: string }>;
   bankAccounts: Array<{ id: string; name: string; bankName?: string | null }>;
+  customerPayments: Array<{ id: string; number: string; customer?: { name: string } | null; reference?: string | null }>;
+  supplierPayments: Array<{ id: string; number: string; supplier?: { name: string } | null; reference?: string | null }>;
 }
 
 export function Topbar() {
@@ -136,6 +140,12 @@ export function Topbar() {
     for (const ba of r.bankAccounts ?? []) {
       out.push({ kind: 'bankAccount', id: ba.id, label: ba.name, sub: ba.bankName ?? undefined, href: `/settings/bank-accounts/${ba.id}` });
     }
+    for (const cp of r.customerPayments ?? []) {
+      out.push({ kind: 'customerPayment', id: cp.id, label: cp.number, sub: cp.customer?.name ?? cp.reference ?? undefined, href: `/receivables/payments/${cp.id}` });
+    }
+    for (const sp of r.supplierPayments ?? []) {
+      out.push({ kind: 'supplierPayment', id: sp.id, label: sp.number, sub: sp.supplier?.name ?? sp.reference ?? undefined, href: `/payables/payments/${sp.id}` });
+    }
     return out;
   })();
 
@@ -210,6 +220,8 @@ export function Topbar() {
                       salesOrder: 'Sales Orders',
                       purchaseOrder: 'Purchase Orders',
                       bankAccount: 'Bank Accounts',
+                      customerPayment: 'Customer Payments',
+                      supplierPayment: 'Supplier Payments',
                     };
                     return (
                       <li key={`${hit.kind}-${hit.id}-${idx}`} data-result-idx={idx}>

@@ -161,6 +161,10 @@ shortcut buttons back to the parent workflow:
 | `/settings/tax-codes`   | `/settings/tax-codes/[id]`     | Rate, type (MyInvois taxTypeCode), description, audit notes |
 | `/settings/bank-accounts` | `/settings/bank-accounts/[id]` | Bank details + reconcile / GL / dashboard shortcuts |
 | `/stock/movements`      | `/stock/movements/[id]`        | Type, qty, unit cost, total, related item deep-link |
+| `/receivables/credit-notes` | `/receivables/credit-notes/[id]` | Lines, totals, related invoice, delete-reverses-GL |
+| `/payables/debit-notes` | `/payables/debit-notes/[id]`   | Lines, totals, related bill, delete-reverses-GL |
+| `/receivables/payments` | `/receivables/payments/[id]`   | Amount, applied/unapplied, application table with invoice deep-links, audit activity |
+| `/payables/payments`    | `/payables/payments/[id]`      | Amount, applied/unapplied, application table with bill deep-links, audit activity |
 | `/receivables/customers/[id]` | (same)                       | Outstanding + tax + contact + audit activity    |
 | `/payables`            | `/payables/[id]`                 | Supplier payment, debit note                    |
 | `/payables/suppliers/[id]`    | (same)                       | Outstanding + tax + contact + audit activity    |
@@ -213,7 +217,7 @@ build that's actually running.
 
 ## Testing
 
-24 Jest test suites / 186 unit tests covering: GL (service + posting),
+24 Jest test suites / 191 unit tests covering: GL (service + posting),
 AR, AP, e-invoice mapper (basic + extras), UBL 2.1 validator (basic +
 extras), MyInvois HTTP client, recurring, stock, bank accounts, payments
 (customer + supplier), credit notes, debit notes, sales orders,

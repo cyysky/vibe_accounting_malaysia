@@ -65,7 +65,9 @@ front end, packaged as a self-contained Docker Compose stack.
 
 - **Detail pages** for every list entity (customer, supplier, sales order,
   purchase order, recurring template, stock item, journal entry, bank
-  reconciliation, user) — breadcrumbs, action shortcuts back to the parent
+  reconciliation, user, credit note, debit note, customer payment,
+  supplier payment) — breadcrumbs, action shortcuts back to the parent
+  workflow, and a system-wide audit-log Activity section. — breadcrumbs, action shortcuts back to the parent
   workflow, and a system-wide audit-log Activity section.
 - **Toast notifications** (`useToast()`) fire on every mutation (success,
   warning, error, info) so users get immediate feedback without watching for
@@ -96,6 +98,10 @@ exposes shortcut buttons back to the parent workflow:
 - **Tax codes** – `/settings/tax-codes/[id]` shows code, rate %, MyInvois taxTypeCode and description.
 - **Bank accounts** – `/settings/bank-accounts/[id]` shows bank details, opening balance and shortcuts to reconcile, GL and dashboard.
 - **Stock movements** – `/stock/movements/[id]` shows type, qty, unit cost, total and deep-links the underlying item.
+- **Credit notes** – `/receivables/credit-notes/[id]` shows reason, totals, line items, related invoice and delete-reverses-GL action.
+- **Debit notes** – `/payables/debit-notes/[id]` shows reason, totals, line items, related bill and delete-reverses-GL action.
+- **Customer payments** – `/receivables/payments/[id]` shows amount, applied/unapplied, application table with deep-link to each invoice, audit activity and supplier/customer link.
+- **Supplier payments** – `/payables/payments/[id]` shows amount, applied/unapplied, application table with deep-link to each bill, audit activity and supplier link.
 - **Dashboard** – the "Recent activity" feed links each entity name to its
   detail page using the `entityHref()` helper.
 

@@ -210,7 +210,7 @@ export default function CustomerPaymentsPage() {
           </div>
         }
         columns={[
-          { key: "number", header: "Receipt #", render: (r) => <span className="font-mono">{r.number}</span> },
+          { key: "number", header: "Receipt #", render: (r) => <a href={"/receivables/payments/" + r.id} className="font-mono text-brand-700 hover:underline">{r.number}</a> },
           { key: "date", header: "Date" },
           { key: "customer", header: "Customer", render: (r) => r.customer?.name ?? "-" },
           { key: "method", header: "Method", render: (r) => <StatusBadge status={r.method} /> },

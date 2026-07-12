@@ -232,7 +232,7 @@ export default function CreditNotesPage() {
           </div>
         }
         columns={[
-          { key: "number", header: "Number", render: (r) => <span className="font-mono">{r.number}</span> },
+          { key: "number", header: "Number", render: (r) => <a href={"/receivables/credit-notes/" + r.id} className="font-mono text-brand-700 hover:underline">{r.number}</a> },
           { key: "date", header: "Date", render: (r) => r.date },
           { key: "customer", header: "Customer", render: (r) => r.customer?.name ?? "-" },
           { key: "invoice", header: "Invoice", render: (r) => r.invoice ? <a href={'/receivables/' + r.invoice.id} className="font-mono text-xs text-brand-700 hover:underline">{r.invoice.number}</a> : "—" },

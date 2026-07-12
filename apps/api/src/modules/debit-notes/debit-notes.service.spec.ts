@@ -120,4 +120,26 @@ describe("DebitNotesService", () => {
     const svc = new DebitNotesService(prisma, makeSeq(), makePosting());
     await expect(svc.get("missing")).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it("get(id) returns the debit note with relations", async () => {
+    const prisma = makePrisma();
+    const full = { id: "dn1", number: "DN-1", supplier: { id: "s1" }, invoice: null, lines: [] };
+    prisma.debitNote.findUnique.mockResolvedValue(full);
+    const svc = new DebitNotesService(prisma, makeSeq(), makePosting());
+    await expect(svc.get("dn1")).resolves.toEqual(full);
+  });
+
+  it("list() filters by accountBook and optional supplierId", async () => {
+    const prisma = makePrisma();
+    prisma.debitNote.findMany.mockResolvedValue([]);
+    const svc = new DebitNotesService(prisma, makeSeq(), makePosting());
+    await svc.list("B1");
+    expect(prisma.debitNote.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { accountBookId: "B1" } }),
+    );
+    await svc.list("B1", "s1");
+    expect(prisma.debitNote.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({ where: { accountBookId: "B1", supplierId: "s1" } }),
+    );
+  });
 });

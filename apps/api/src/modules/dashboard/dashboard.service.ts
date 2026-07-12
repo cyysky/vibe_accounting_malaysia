@@ -163,7 +163,7 @@ export class DashboardService {
         orderBy: { date: 'desc' },
       }),
     ]);
-    const [creditNotes, debitNotes, salesOrders, purchaseOrders, bankAccounts] = await Promise.all([
+    const [creditNotes, debitNotes, salesOrders, purchaseOrders, bankAccounts, customerPayments, supplierPayments] = await Promise.all([
       this.prisma.creditNote.findMany({
         where: { accountBookId: bookId, OR: [{ number: contains }, { reason: contains }] },
         take: limit,
@@ -191,7 +191,19 @@ export class DashboardService {
         take: limit,
         orderBy: { name: 'asc' },
       }),
+      this.prisma.customerPayment.findMany({
+        where: { accountBookId: bookId, OR: [{ number: contains }, { reference: contains }] },
+        take: limit,
+        orderBy: { date: 'desc' },
+        include: { customer: { select: { id: true, name: true } } },
+      }),
+      this.prisma.supplierPayment.findMany({
+        where: { accountBookId: bookId, OR: [{ number: contains }, { reference: contains }] },
+        take: limit,
+        orderBy: { date: 'desc' },
+        include: { supplier: { select: { id: true, name: true } } },
+      }),
     ]);
-    return { customers, suppliers, items, invoices, bills, journals, creditNotes, debitNotes, salesOrders, purchaseOrders, bankAccounts };
+    return { customers, suppliers, items, invoices, bills, journals, creditNotes, debitNotes, salesOrders, purchaseOrders, bankAccounts, customerPayments, supplierPayments };
   }
 }

@@ -195,7 +195,7 @@ export default function SupplierPaymentsPage() {
           </div>
         }
         columns={[
-          { key: "number", header: "Payment #", render: (r) => <span className="font-mono">{r.number}</span> },
+          { key: "number", header: "Payment #", render: (r) => <a href={"/payables/payments/" + r.id} className="font-mono text-brand-700 hover:underline">{r.number}</a> },
           { key: "date", header: "Date" },
           { key: "supplier", header: "Supplier", render: (r) => r.supplier?.name ?? "-" },
           { key: "method", header: "Method", render: (r) => <StatusBadge status={r.method} /> },

@@ -60,8 +60,10 @@ export class GlController {
     @CurrentUser() user: AuthUser,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
   ) {
-    return this.svc.listJournals(this.bookIdOrThrow(user), Number(page ?? 1), Number(pageSize ?? 50));
+    return this.svc.listJournals(this.bookIdOrThrow(user), Number(page ?? 1), Number(pageSize ?? 50), from, to);
   }
 
   @Post("journals")

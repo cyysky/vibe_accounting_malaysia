@@ -434,8 +434,8 @@ class ApiClient {
     return this.request<void>('DELETE', `/gl/accounts/${id}`);
   }
 
-  journals(page = 1, pageSize = 50): Promise<PaginatedResponse<JournalEntry>> {
-    return this.request<PaginatedResponse<JournalEntry>>('GET', '/gl/journals', undefined, { page, pageSize });
+  journals(page = 1, pageSize = 50, from?: string, to?: string): Promise<PaginatedResponse<JournalEntry>> {
+    return this.request<PaginatedResponse<JournalEntry>>('GET', '/gl/journals', undefined, { page, pageSize, from, to });
   }
 
   createJournal(input: { date: string; description: string; reference?: string; lines: Array<{ accountId: string; description?: string; debit: number; credit: number }> }): Promise<JournalEntry> {

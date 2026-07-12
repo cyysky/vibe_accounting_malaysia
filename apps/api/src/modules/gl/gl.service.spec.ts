@@ -90,6 +90,29 @@ describe('GlService', () => {
     });
   });
 
+  describe('listJournals', () => {
+    it('forwards from/to as a date range filter on both findMany and count', async () => {
+      prisma.journalEntry.findMany.mockResolvedValue([]);
+      prisma.journalEntry.count.mockResolvedValue(0);
+      await service.listJournals('book-1', 1, 50, '2025-01-01', '2025-01-31');
+      const findCall = prisma.journalEntry.findMany.mock.calls[0][0];
+      const countCall = prisma.journalEntry.count.mock.calls[0][0];
+      expect(findCall.where.accountBookId).toBe('book-1');
+      expect(findCall.where.date).toEqual({ gte: new Date('2025-01-01'), lte: new Date('2025-01-31') });
+      expect(countCall.where.accountBookId).toBe('book-1');
+      expect(countCall.where.date).toEqual({ gte: new Date('2025-01-01'), lte: new Date('2025-01-31') });
+    });
+
+    it('omits the date filter when neither from nor to is provided', async () => {
+      prisma.journalEntry.findMany.mockResolvedValue([]);
+      prisma.journalEntry.count.mockResolvedValue(0);
+      await service.listJournals('book-1', 1, 50);
+      const findCall = prisma.journalEntry.findMany.mock.calls[0][0];
+      expect(findCall.where.accountBookId).toBe('book-1');
+      expect(findCall.where.date).toBeUndefined();
+    });
+  });
+
   describe('tax codes', () => {
     it('creates a tax code', async () => {
       prisma.taxCode.create.mockResolvedValue({ id: 't1', code: 'SVAT-12', rate: { toString: () => '0.1200' } });

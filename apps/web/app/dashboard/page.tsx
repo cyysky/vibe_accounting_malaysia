@@ -172,7 +172,7 @@ export default function DashboardPage() {
               <tbody>
                 {d.topCustomers.map((c) => (
                   <tr key={c.customerId} className="border-t">
-                    <td className="px-3 py-2">{c.name}</td>
+                    <td className="px-3 py-2"><Link href={`/receivables/customers/${c.customerId}`} className="font-medium text-brand-700 hover:underline">{c.name}</Link></td>
                     <td className="px-3 py-2 text-right tabular-nums">{fmt(Number(c.balance))}</td>
                   </tr>
                 ))}
@@ -200,7 +200,7 @@ export default function DashboardPage() {
               <tbody>
                 {d.topItems.map((i) => (
                   <tr key={i.itemId} className="border-t">
-                    <td className="px-3 py-2">{i.name}</td>
+                    <td className="px-3 py-2"><Link href={`/stock/${i.itemId}`} className="font-medium text-brand-700 hover:underline">{i.name}</Link></td>
                     <td className="px-3 py-2 text-right tabular-nums">{Number(i.onHand).toLocaleString("en-MY")}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{Number(i.reorderLevel).toLocaleString("en-MY")}</td>
                   </tr>
@@ -259,6 +259,9 @@ export default function DashboardPage() {
             <Card title="Investing" value={fmt(cash?.investing ?? 0)} accent={(cash?.investing ?? 0) >= 0 ? 'good' : 'bad'} hint="Asset movements" />
             <Card title="Financing" value={fmt(cash?.financing ?? 0)} accent={(cash?.financing ?? 0) >= 0 ? 'good' : 'bad'} hint="Liability / equity" />
             <Card title="Net cash flow" value={fmt(cash?.net ?? 0)} accent={(cash?.net ?? 0) >= 0 ? 'good' : 'warn'} hint="Operating + investing + financing" />
+          </div>
+          <div className="mt-2 text-right">
+            <Link href="/reports" className="text-xs text-brand-700 hover:underline">View full report →</Link>
           </div>
           {cashQ.error && (
             <p className="mt-2 text-xs text-rose-600">Failed to load cash flow: {(cashQ.error as Error).message}</p>

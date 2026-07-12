@@ -70,6 +70,8 @@ export class GlService {
     bookId: string,
     page = 1,
     pageSize = 50,
+    from?: string,
+    to?: string,
   ): Promise<{
     data: Array<Record<string, unknown>>;
     total: number;
@@ -81,13 +83,35 @@ export class GlService {
     const skip = (safePage - 1) * safeSize;
     const [data, total] = await Promise.all([
       this.prisma.journalEntry.findMany({
-        where: { accountBookId: bookId },
+        where: {
+        accountBookId: bookId,
+        ...(from || to
+          ? {
+              date: {
+                ...(from ? { gte: new Date(from) } : {}),
+                ...(to ? { lte: new Date(to) } : {}),
+              },
+            }
+          : {}),
+      },
         include: { lines: { include: { account: true } } },
         orderBy: [{ createdAt: "desc" }, { date: "desc" }, { number: "desc" }],
         skip,
         take: safeSize,
       }),
-      this.prisma.journalEntry.count({ where: { accountBookId: bookId } }),
+      this.prisma.journalEntry.count({
+        where: {
+          accountBookId: bookId,
+          ...(from || to
+            ? {
+                date: {
+                  ...(from ? { gte: new Date(from) } : {}),
+                  ...(to ? { lte: new Date(to) } : {}),
+                },
+              }
+            : {}),
+        },
+      }),
     ]);
     return { data: data as unknown as Array<Record<string, unknown>>, total, page: safePage, pageSize: safeSize };
   }

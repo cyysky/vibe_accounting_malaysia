@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,13 +33,19 @@ type JournalForm = z.infer<typeof journalSchema>;
 
 const fmt = (n: number) => (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR' });
 
-export default function JournalPage() {
+function JournalPageInner() {
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
 
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => api.accounts() });
-  const journals = useQuery({ queryKey: ['journals'], queryFn: () => api.journals() });
+  const searchParams = useSearchParams();
+  const dateFrom = searchParams.get('from') ?? '';
+  const dateTo = searchParams.get('to') ?? '';
+  const journals = useQuery({
+    queryKey: ['journals', dateFrom, dateTo],
+    queryFn: () => api.journals(1, 100, dateFrom || undefined, dateTo || undefined),
+  });
 
   const form = useForm<JournalForm>({
     resolver: zodResolver(journalSchema),
@@ -273,5 +280,14 @@ export default function JournalPage() {
         </form>
       </Modal>
     </div>
+  );
+}
+
+
+export default function JournalPage() {
+  return (
+    <Suspense fallback={null}>
+      <JournalPageInner />
+    </Suspense>
   );
 }

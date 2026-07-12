@@ -154,7 +154,7 @@ or via the helper script:
 docker compose -f infra\docker-compose.yml exec api npm test
 ```
 
-Current coverage: **24 Jest suites / 178 unit tests** (all passing).
+Current coverage: **24 Jest suites / 180 unit tests** (all passing).
 
 Covers (every suite ships a .spec.ts next to the source it exercises):
 

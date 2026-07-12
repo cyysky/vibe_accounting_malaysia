@@ -185,6 +185,15 @@ shortcut buttons back to the parent workflow:
   query params with a brand-tinted "Filtered by …" banner and a one-click
   "Clear filter" link.
 
+## Topbar health pill
+
+`apps/web/components/topbar.tsx` polls `/health` every 30 s (via
+`api.health()`) and shows a green "Online" / red "Offline" pill next to
+the product name. No auth required; flips to red within a minute of an
+API outage so operators see the problem without navigating to the health
+endpoint. The version is in the title tooltip so you can confirm the
+build that's actually running.
+
 ## UI / UX primitives
 
 - `<PageHeader title description breadcrumbs actions>` — consistent detail-page
@@ -204,7 +213,7 @@ shortcut buttons back to the parent workflow:
 
 ## Testing
 
-24 Jest test suites / 178 unit tests covering: GL (service + posting),
+24 Jest test suites / 180 unit tests covering: GL (service + posting),
 AR, AP, e-invoice mapper (basic + extras), UBL 2.1 validator (basic +
 extras), MyInvois HTTP client, recurring, stock, bank accounts, payments
 (customer + supplier), credit notes, debit notes, sales orders,

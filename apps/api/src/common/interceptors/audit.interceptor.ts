@@ -9,6 +9,21 @@ import { Observable, tap } from 'rxjs';
 import { Request } from 'express';
 import { AuditLogService } from '../../modules/audit-log/audit-log.service';
 
+const KNOWN_RESOURCE_NAMES = new Set<string>([
+  "credit-notes",
+  "debit-notes",
+  "bank-accounts",
+  "account-books",
+  "fiscal-years",
+  "tax-codes",
+  "sales-orders",
+  "purchase-orders",
+  "invoices",
+  "payments",
+  "configs",
+  "users",
+]);
+
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /**
@@ -84,6 +99,9 @@ export class AuditInterceptor implements NestInterceptor {
     const module = m[1];
     const resource = m[2];
     if (!resource) return module;
+    if (KNOWN_RESOURCE_NAMES.has(resource)) {
+      return `${module}-${resource.replace(/s$/, "")}`;
+    }
     if (/^\[?[\w-]+\]?$/.test(resource) || resource.length > 16) {
       // Looks like an id segment
       return `${module}-${this.guessSingular(module)}`;

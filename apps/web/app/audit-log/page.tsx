@@ -1,48 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { Activity, Download } from "lucide-react";
 import Link from "next/link";
 import { api } from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { entityHref, KNOWN_ENTITIES, KNOWN_ACTIONS } from "../../lib/entityHref";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 
-const ENTITIES = ["", "CustomerInvoice", "SupplierInvoice", "JournalEntry", "CustomerPayment", "SupplierPayment", "EinvoiceSubmission", "Customer", "Supplier", "Item", "User"];
-const ACTIONS = ["", "CREATE", "UPDATE", "DELETE", "POST", "SUBMIT", "CANCEL", "POLL", "PAY"];
+const ENTITIES = ["", ...KNOWN_ENTITIES];
+const ACTIONS = ["", ...KNOWN_ACTIONS];
 
-function entityHref(entity: string, entityId: string): string | null {
-  switch (entity) {
-    case "CustomerInvoice":
-    case "CreditNote":
-    case "RecurringInvoice":
-      return "/receivables/" + entityId;
-    case "SupplierInvoice":
-    case "DebitNote":
-      return "/payables/" + entityId;
-    case "SalesOrder":
-      return "/sales/" + entityId;
-    case "PurchaseOrder":
-      return "/purchase/" + entityId;
-    case "Customer":
-      return "/receivables/customers/" + entityId;
-    case "Supplier":
-      return "/payables/suppliers/" + entityId;
-    case "JournalEntry":
-      return entityId ? "/dashboard/journal/" + entityId : "/dashboard/journal";
-    case "Item":
-      return "/stock/" + entityId;
-    case "User":
-      return "/settings/users/" + entityId;
-    default:
-      return null;
-  }
-}
 
 function actionColor(a: string) {
-  if (a === "CREATE" || a === "POST" || a === "SUBMIT" || a === "PAY") return "ISSUED";
-  if (a === "DELETE" || a === "CANCEL") return "VOID";
+  if (a === "CREATE" || a === "POST" || a === "SUBMIT" || a === "PAY" || a === "VALIDATE") return "ISSUED";
+  if (a === "DELETE" || a === "CANCEL" || a === "REJECT") return "VOID";
   if (a === "POLL") return "PENDING";
+  if (a === "CLOSE") return "PAID";
+  if (a === "REOPEN") return "PARTIAL";
   return "DRAFT";
 }
 
@@ -54,8 +31,9 @@ function buildExportHref(entity: string, action: string, since: string): string 
   return params.length ? "/api/audit-log/export.csv?" + params.join("&") : "/api/audit-log/export.csv";
 }
 
-export default function AuditLogPage() {
-  const [entity, setEntity] = useState("");
+function AuditLogPageInner() {
+  const searchParams = useSearchParams();
+  const [entity, setEntity] = useState(searchParams.get("entity") ?? "");
   const [action, setAction] = useState("");
   const [since, setSince] = useState("");
   const q = useQuery({
@@ -167,6 +145,9 @@ export default function AuditLogPage() {
                   <span className="font-medium">{e.action}</span>
                   <span className="text-slate-500">on</span>
                   {(() => { const href = entityHref(e.entity, e.entityId); const label = e.entity + "#" + e.entityId.slice(0, 8); return href ? <Link href={href} className="font-mono text-xs text-brand-700 hover:underline">{label}</Link> : <span className="font-mono text-xs text-slate-700">{label}</span>; })()}
+                  <Link href={"/audit-log?entity=" + encodeURIComponent(e.entity)} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-slate-200" title={"Show only " + e.entity + " events"}>
+                    filter
+                  </Link>
                   {e.user && <span className="text-xs text-slate-500">by {e.user.name ?? e.user.email}</span>}
                 </div>
                 {e.message && <p className="mt-1 text-sm text-slate-600">{e.message}</p>}
@@ -177,5 +158,13 @@ export default function AuditLogPage() {
         </ol>
       )}
     </div>
+  );
+}
+
+export default function AuditLogPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuditLogPageInner />
+    </Suspense>
   );
 }

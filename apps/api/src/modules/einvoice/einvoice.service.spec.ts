@@ -424,4 +424,93 @@ describe("EinvoiceService", () => {
       await expect(svc.submitInvoice("book-1", "inv-1", {})).rejects.toThrow(BadRequestException);
     });
   });
+
+  describe("submission queries", () => {
+    it("listSubmissions filters by bookId and optionally by invoiceId", async () => {
+      const prisma = makePrisma();
+      prisma.einvoiceSubmission.findMany.mockResolvedValue([{ id: "s1" }]);
+      const { svc } = buildService(prisma);
+      await expect(svc.listSubmissions("book-1")).resolves.toEqual([{ id: "s1" }]);
+      expect(prisma.einvoiceSubmission.findMany).toHaveBeenCalledWith({ where: { accountBookId: "book-1" }, orderBy: { submittedAt: "desc" }, include: { invoice: true } });
+      await svc.listSubmissions("book-1", "inv-1");
+      expect(prisma.einvoiceSubmission.findMany).toHaveBeenLastCalledWith({ where: { accountBookId: "book-1", invoiceId: "inv-1" }, orderBy: { submittedAt: "desc" }, include: { invoice: true } });
+    });
+
+    it("getSubmission returns the submission or throws NotFound", async () => {
+      const prisma = makePrisma();
+      prisma.einvoiceSubmission.findFirst.mockResolvedValue({ id: "s1" });
+      const { svc } = buildService(prisma);
+      await expect(svc.getSubmission("book-1", "s1")).resolves.toEqual({ id: "s1" });
+      prisma.einvoiceSubmission.findFirst.mockResolvedValue(null);
+      await expect(svc.getSubmission("book-1", "missing")).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it("getSubmissionDetails requires the underlying submission UUID", async () => {
+      const prisma = makePrisma();
+      prisma.einvoiceSubmission.findFirst.mockResolvedValue({ id: "s1" });
+      const { svc } = buildService(prisma);
+      await expect(svc.getSubmissionDetails("book-1", "s1")).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("getSubmissionDetails uses submissionUid when present", async () => {
+      const prisma = makePrisma();
+      prisma.einvoiceSubmission.findFirst.mockResolvedValue({ id: "s1", submissionUid: "uid-1" });
+      const settings = makeSettings();
+      const client = makeClient();
+      (client.getSubmission as jest.Mock).mockResolvedValue({ status: 2 });
+      const { svc } = buildService(prisma, { client, settings });
+      await expect(svc.getSubmissionDetails("book-1", "s1")).resolves.toEqual({ status: 2 });
+      expect(client.getSubmission).toHaveBeenCalled();
+    });
+
+    it("getRecentDocuments defaults to pageNo=1 pageSize=20", async () => {
+      const prisma = makePrisma();
+      const client = makeClient();
+      (client.getRecentDocuments as jest.Mock).mockResolvedValue({ result: [] });
+      const { svc } = buildService(prisma, { client });
+      await svc.getRecentDocuments("book-1", EinvoiceEnvironment.SANDBOX);
+      expect(client.getRecentDocuments).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ pageNo: "1", pageSize: "20" }));
+    });
+
+    it("getRecentDocuments honours explicit pagination", async () => {
+      const prisma = makePrisma();
+      const client = makeClient();
+      (client.getRecentDocuments as jest.Mock).mockResolvedValue({ result: [] });
+      const { svc } = buildService(prisma, { client });
+      await svc.getRecentDocuments("book-1", EinvoiceEnvironment.PRODUCTION, 3, 50);
+      expect(client.getRecentDocuments).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ pageNo: "3", pageSize: "50" }));
+    });
+  });
+
+  describe("pollSubmission", () => {
+    it("persists updated documentStatus and refreshes the invoice record", async () => {
+      const prisma = makePrisma();
+      prisma.einvoiceSubmission.findFirst.mockResolvedValue({ id: "s1", submissionUid: "uid-1", invoiceId: "inv-1", documentStatus: 1 });
+      const client = makeClient();
+      (client.searchDocuments as jest.Mock).mockResolvedValue({ result: [{ status: 2, uuid: "u-1", longId: "l-1" }] });
+      prisma.einvoiceSubmission.update.mockResolvedValue({});
+      prisma.customerInvoice.update.mockResolvedValue({});
+      const { svc } = buildService(prisma, { client });
+      await svc.pollSubmission("book-1", "s1");
+      expect(prisma.einvoiceSubmission.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "s1" }, data: expect.objectContaining({ documentStatus: 2 }) }));
+      expect(prisma.customerInvoice.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "inv-1" }, data: expect.objectContaining({ einvoiceStatus: "VALID" }) }));
+    });
+
+    it("propagates MyInvois errors verbatim so callers can react", async () => {
+      const prisma = makePrisma();
+      prisma.einvoiceSubmission.findFirst.mockResolvedValue({ id: "s1", submissionUid: "uid-1", invoiceId: "inv-1", documentStatus: 1 });
+      const client = makeClient();
+      (client.searchDocuments as jest.Mock).mockRejectedValue(new Error("503 Service Unavailable"));
+      const { svc } = buildService(prisma, { client });
+      await expect(svc.pollSubmission("book-1", "s1")).rejects.toThrow(/503/);
+      expect(prisma.einvoiceSubmission.update).not.toHaveBeenCalled();
+    });
+
+    it("throws NotFound when the submission is missing", async () => {
+      const prisma = makePrisma();
+      prisma.einvoiceSubmission.findFirst.mockResolvedValue(null);
+      const { svc } = buildService(prisma);
+      await expect(svc.pollSubmission("book-1", "missing")).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
 });

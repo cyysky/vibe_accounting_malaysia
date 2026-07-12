@@ -1,0 +1,26 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "rootDir": ".",
+  "testMatch": [
+    "<rootDir>/lib/**/*.test.ts"
+  ],
+  "moduleFileExtensions": [
+    "ts",
+    "tsx",
+    "js",
+    "jsx"
+  ],
+  "transform": {
+    "^.+\\\\.tsx?$": [
+      "ts-jest",
+      {
+        "tsconfig": {
+          "jsx": "react",
+          "esModuleInterop": true,
+          "moduleResolution": "bundler"
+        }
+      }
+    ]
+  }
+}

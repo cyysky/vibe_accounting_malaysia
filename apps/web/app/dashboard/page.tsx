@@ -7,6 +7,7 @@ import {
   ShoppingCart, ShoppingBag, Wallet, FileMinus2, FilePlus2, Repeat, Activity,
 } from "lucide-react";
 import { api } from "../../lib/api";
+import { entityHref } from "../../lib/entityHref";
 import type { DashboardSummary } from "../../lib/api";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatusBadge } from "../../components/ui/StatusBadge";
@@ -28,25 +29,6 @@ function fmt(n: number): string {
 }
 
 
-function entityHref(entity: string, entityId: string): string | null {
-  switch (entity) {
-    case "CustomerInvoice":
-    case "CreditNote":
-    case "RecurringInvoice":
-      return "/receivables/" + entityId;
-    case "SupplierInvoice":
-    case "DebitNote":
-      return "/payables/" + entityId;
-    case "SalesOrder":
-      return "/sales/" + entityId;
-    case "PurchaseOrder":
-      return "/purchase/" + entityId;
-    case "JournalEntry":
-      return "/dashboard/journal";
-    default:
-      return null;
-  }
-}
 
 function QuickAction({ href, icon: Icon, label, hint }: { href: string; icon: React.ComponentType<{ className?: string }>; label: string; hint?: string }) {
   return (

@@ -173,7 +173,68 @@ describe("UBL validator: extras", () => {
       });
       const result = validateUblDocument(doc);
       expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(false);
+    })
+
+    it("accepts an EI prefix with 12 digits", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "EI123456789012", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(false);
     });
+
+    it("warns when the supplier TIN has fewer than 8 digits", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG1234567", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
+    });
+
+    it("warns when the supplier TIN has more than 12 digits", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "IG1234567890123", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
+    });
+
+    it("warns when the supplier TIN prefix is 3 letters (exceeds 2-letter cap)", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "ABC12345678", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
+    });
+
+    it("accepts a 12-digit no-prefix TIN", () => {
+      const doc = buildUblInvoice({
+        invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
+        customer: baseCustomer,
+        supplier: { tin: "123456789012", brn: "BRN123", name: "Demo Co" },
+        taxCodes: new Map(),
+        version: "1.1",
+      });
+      const result = validateUblDocument(doc);
+      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(false);
+    });
+;
   });
 
   describe("PaymentMeans and AdditionalDocumentReference validation", () => {

@@ -8,6 +8,7 @@ import { api } from "../../../../lib/api";
 import { Button } from "../../../../components/ui/Button";
 import { PageHeader } from "../../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../../components/ui/StatusBadge";
+import { TinValidator } from "../../../../components/ui/TinValidator";
 
 const fmt = (n: number) => (n ?? 0).toLocaleString("en-MY", { style: "currency", currency: "MYR" });
 
@@ -77,6 +78,7 @@ export default function CustomerDetailPage() {
           <dl className="space-y-2 text-sm">
             <div><dt className="text-xs uppercase text-slate-500">TIN</dt><dd className="font-mono">{c.taxId ?? "—"}</dd></div>
             <div><dt className="text-xs uppercase text-slate-500">BRN</dt><dd className="font-mono">{c.brn ?? "—"}</dd></div>
+            <TinValidator tin={c.taxId ?? ""} brn={c.brn ?? undefined} partyName={c.name} />
           </dl>
         </div>
         <div className="rounded-lg border bg-white p-4 shadow-sm">

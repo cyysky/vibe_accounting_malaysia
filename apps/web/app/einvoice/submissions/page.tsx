@@ -39,6 +39,18 @@ export default function EinvoiceSubmissionsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }); toast.warning('Submission rejected', 'Buyer-initiated rejection has been recorded.'); },
     onError: (e: Error) => toast.error('Reject failed', e.message),
   });
+  const details = useMutation({
+    mutationFn: (id: string) => api.getEinvoiceSubmissionDetails(id),
+    onSuccess: (data) => setDetailsPayload(typeof data === "object" ? JSON.stringify(data, null, 2) : String(data)),
+    onError: (e: Error) => toast.error("Fetch failed", e.message),
+  });
+  const documentQ = useMutation({
+    mutationFn: (id: string) => api.getEinvoiceDocument(id),
+    onSuccess: (data) => setDocumentPayload(typeof data === "object" ? JSON.stringify(data, null, 2) : String(data)),
+    onError: (e: Error) => toast.error("Fetch failed", e.message),
+  });
+  const [detailsPayload, setDetailsPayload] = useState<string | null>(null);
+  const [documentPayload, setDocumentPayload] = useState<string | null>(null);
   const recent = useMutation({
     mutationFn: () => api.recentEinvoices('SANDBOX'),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['einvoice-submissions'] }),
@@ -102,7 +114,7 @@ export default function EinvoiceSubmissionsPage() {
             header: '',
             align: 'right',
             render: (s) => (
-              <div className="flex justify-end gap-1">
+              <div className="flex justify-end gap-1 flex-wrap">
                 {s.invoiceId && (
                   <Link href={`/receivables/${s.invoiceId}`} title="Re-validate invoice">
                     <Button size="sm" variant="ghost">
@@ -128,6 +140,33 @@ export default function EinvoiceSubmissionsPage() {
           },
         ]}
       />
+
+{(detailsPayload || documentPayload) && (
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-700">
+              {detailsPayload ? "Submission details" : "Original document"}
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigator.clipboard.writeText(detailsPayload ?? documentPayload ?? "")}
+                className="text-xs text-brand-700 hover:underline"
+              >
+                Copy
+              </button>
+              <button
+                onClick={() => { setDetailsPayload(null); setDocumentPayload(null); }}
+                className="text-xs text-slate-500 hover:underline"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <pre className="max-h-80 overflow-auto rounded bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">
+            {detailsPayload ?? documentPayload}
+          </pre>
+        </div>
+      )}
 
       <div className="rounded-md border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
         <div className="flex items-center gap-2 font-semibold text-slate-700">

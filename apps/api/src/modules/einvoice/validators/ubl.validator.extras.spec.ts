@@ -64,7 +64,7 @@ describe("UBL validator: extras", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map(),
       version: "1.1",
     });
@@ -85,7 +85,7 @@ describe("UBL validator: extras", () => {
         ],
       },
       customer: baseCustomer,
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map([
         ["t1", { id: "t1", accountBookId: "b1", code: "EXEMPT", name: "Exempt", rate: D(0), description: null, active: true, taxTypeCode: "E" }],
       ]),
@@ -109,7 +109,7 @@ describe("UBL validator: extras", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map(),
       version: "1.1",
     });
@@ -123,7 +123,7 @@ describe("UBL validator: extras", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
       customer: baseCustomer,
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map(),
       version: "1.1",
       deliveryDate: new Date("2025-01-20T00:00:00Z"),
@@ -139,7 +139,7 @@ describe("UBL validator: extras", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map(),
       version: "1.1",
     });
@@ -155,19 +155,19 @@ describe("UBL validator: extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "BROKEN-TIN-12345", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "BROKEN-TIN-12345", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
       });
       const result = validateUblDocument(doc);
-      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
+      expect(result.issues.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
     });
 
     it("accepts a properly-formatted LHDNM TIN with IG prefix", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG1234567890", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "IG1234567890", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
       });
@@ -179,7 +179,7 @@ describe("UBL validator: extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "EI123456789012", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "EI123456789012", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
       });
@@ -191,43 +191,43 @@ describe("UBL validator: extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG1234567", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "IG1234567", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
       });
       const result = validateUblDocument(doc);
-      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
+      expect(result.issues.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
     });
 
     it("warns when the supplier TIN has more than 12 digits", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG1234567890123", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "IG1234567890123", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
       });
       const result = validateUblDocument(doc);
-      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
+      expect(result.issues.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
     });
 
     it("warns when the supplier TIN prefix is 3 letters (exceeds 2-letter cap)", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "ABC12345678", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "ABC12345678", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
       });
       const result = validateUblDocument(doc);
-      expect(result.warnings.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
+      expect(result.issues.some((w) => w.path === "Supplier/PartyTaxScheme/CompanyID" && /LHDNM pattern/.test(w.message))).toBe(true);
     });
 
     it("accepts a 12-digit no-prefix TIN", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "123456789012", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "123456789012", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
       });
@@ -242,7 +242,7 @@ describe("UBL validator: extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         paymentMeansCode: "ZZ",
@@ -255,7 +255,7 @@ describe("UBL validator: extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         paymentMeansCode: "03",
@@ -273,7 +273,7 @@ describe("UBL validator: extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "Widget", quantity: 1, unitPrice: 100, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         paymentMeansCode: "03",
@@ -287,7 +287,7 @@ describe("UBL validator: extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         additionalReferences: [{ id: "FTT-2025-001" }, { id: "FTT-2025-001" }],
@@ -301,7 +301,7 @@ describe("UBL validator: extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         additionalReferences: [{ id: "" }],

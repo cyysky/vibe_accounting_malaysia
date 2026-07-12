@@ -118,114 +118,82 @@ state is unknown.
 | 16   | Wilayah Persekutuan Putrajaya        |
 | 17   | Not Applicable                       |
 
-The mapper (`buildUblInvoice` in `apps/api/src/modules/einvoice/mappers/invoice-v1.1.mapper.ts`)
-emits the canonical UBL 2.1 JSON v1.1 shape with:
+## SDK 2025 / 2026 release-note compliance
 
-- **Allowance / charge** on each line when a discount is present
-- Multi-line supplier and customer addresses (Street + Line)
-- Supplier and customer contact (ElectronicMail + Telephone)
-- MSIC industry code from the `AccountBook.industryCode`
-- Per-currency precision (the invoice currency is propagated to all monetary fields)
-- TIN validation: the mapper throws if the supplier TIN is empty
-- Optional `BillingReference` to link credit/debit notes to their source invoice
+The platform tracks the LHDNM SDK release notes closely.  The changes
+below landed between August 2025 and July 2026 and are wired into the
+UBL mapper + validator (and unit-tested):
 
-## UBL 2.1 JSON structure
+| Date           | Rule                                                                                          |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| 1 Aug 2025     | `TaxExchangeRate` required when `DocumentCurrencyCode` != MYR                                 |
+| 10 Dec 2025    | Same CurrencyExchangeRate rule, deployment timeline reaffirmed for Production 1 Sep 2025      |
+| 28 Dec 2024    | Field validation tightening (character limits, address rules)                                 |
+| 28 Apr 2025    | Customer `Business Activity Description` <= 300 characters; payment terms <= 300 characters   |
+| 7 Feb 2025     | PowerShell signing sample for v1.1; signature / type / sample payload pages                  |
+| 30 Apr 2026    | Scientific notation (`1e-5`, etc.) is rejected in **all** amount fields                      |
+| 12 Jun 2026    | TIN / BRN validation tightens (effective 1 Aug 2026)                                          |
+| 03 Jul 2026    | Production deployment of the field-validation rules on **15 Aug 2026**                        |
+| 08 Jul 2026    | New SVDP 1.2 / 1.3 document versions for the Special Voluntary Disclosure Programme          |
 
-The mapper (`apps/api/src/modules/einvoice/mappers/invoice-v1.1.mapper.ts`)
-produces a document matching the MyInvois UBL 2.1 JSON v1.1 schema:
+### Currency Exchange Rate (1 Aug 2025)
 
-```json
-{
-  "_D": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
-  "_A": "...",
-  "_B": "...",
-  "Invoice": [
-    {
-      "ID": [{ "_": "INV-00001" }],
-      "IssueDate": [{ "_": "2025-01-15" }],
-      "IssueTime": [{ "_": "09:30:00" }],
-      "DueDate":   [{ "_": "2025-02-14" }],
-      "InvoiceTypeCode": [{ "_": "01", "listVersionID": "1.1" }],
-      "DocumentCurrencyCode": [{ "_": "MYR" }],
-      "TaxCurrencyCode": [{ "_": "MYR" }],
-      "AccountingSupplierParty": [ ... ],
-      "AccountingCustomerParty": [ ... ],
-      "InvoiceLine": [ ... ],
-      "LegalMonetaryTotal": [ ... ],
-      "TaxTotal": [ ... ]
-    }
-  ]
-}
-```
+Any invoice whose `DocumentCurrencyCode` is not `MYR` **must** include
+a `TaxExchangeRate` element with:
 
-Mandatory party fields:
+- `SourceCurrencyCode` — equal to `DocumentCurrencyCode`
+- `TargetCurrencyCode` — always `MYR`
+- `CalculationRate` — the foreign-currency -> MYR rate, plain decimal
+  (no scientific notation).
 
-- **Supplier**: BRN (`PartyIdentification`), TIN (`PartyTaxScheme`),
-  MSIC code (`IndustryClassificationCode`), address.
-- **Customer**: BRN or TIN (`PartyIdentification`), address.
+The mapper emits this element for **every** invoice, even MYR ones
+(with `rate = 1.000000`), so callers don't have to branch.  The
+validator enforces its presence when the currency is non-MYR and
+rejects non-MYR `TargetCurrencyCode`.
 
-The mapper throws on missing TIN at the API layer.
+### Scientific notation (30 Apr 2026)
 
-## PaymentMeans codes
+Every monetary amount in the UBL document must be a plain decimal
+string.  JavaScript's default `Number.toString()` switches to
+exponential form for very small or very large magnitudes, so all
+numeric rendering is routed through `toString()` which:
 
-Per the [MyInvois PaymentMeans list](https://sdk.myinvois.hasil.gov.my/codes/payment-means/) the platform exposes the full set of UBL 2.1 PaymentMeans codes via `PAYMENT_MODE_CODES` in `apps/api/src/modules/einvoice/einvoice.config.ts`:
+1. Throws on `NaN` / `Infinity`.
+2. Uses `Number.prototype.toFixed()` at the requested precision.
+3. Falls back to a plain decimal if `toFixed` ever produced `e/E`.
 
-| Code | Display name             |
-| ---- | ------------------------ |
-| 01   | Cash                     |
-| 02   | Cheque                   |
-| 03   | Bank Transfer            |
-| 04   | Credit Card              |
-| 05   | Debit Card               |
-| 06   | e-Wallet / Online Banking |
-| 07   | Direct Debit             |
-| 08   | FPX                      |
-| 09   | e-Money                  |
-| 10   | PayPal / Online Payment  |
+The validator independently re-checks `TaxExchangeRate/CalculationRate`
+and other amount-bearing fields for an `e` or `E`.
 
-Use the helper `paymentModeDisplayName(code)` to render the human-readable label in the UI.
+### TIN and BRN format tightening (12 Jun 2026)
 
-## Country codes
+- Supplier TIN must match `^([A-Z]{1,2})?[0-9]{8,12}$` — either 8-12
+  digits alone, or a 1-2 letter prefix (e.g. `IG`, `EI`) followed by
+  8-12 digits.  Anything else is an **error** (not a warning) per the
+  effective 1 Aug 2026 enforcement.
+- BRN, when used in `PartyIdentification` with `schemeID = "BRN"`,
+  must be **9-12 digits**.
 
-The mapper exposes a `toCountryCode(input)` helper that resolves free-form country names (`"Malaysia"`, `"SG"`, `"United States"`, ...) to the ISO-3166-1 alpha-3 codes MyInvois requires in `PostalAddress/Country/IdentificationCode`. Covers all ASEAN neighbours plus major trading partners (USA, UK, AU, CN, HK, JP, KR, PH, VN, IN, BN). Falls back to `MYS` for unknown / empty input.
+The validator reports these as `code: FORMAT, severity: 'error'` so
+the submit endpoint refuses to talk to MyInvois until they are fixed.
 
-## InvoicePeriod (delivery date), PaymentMeans + PayeeFinancialAccount, AdditionalDocumentReference
+## X.509 document signing
 
-The mapper accepts three optional extensions on the mapper context (and the
-`SubmitInvoiceDto`) so callers can attach richer metadata per
-[MyInvois SDK](https://sdk.myinvois.hasil.gov.my/):
+Every submitted document MUST be signed with an X.509 certificate whose
+Extended Key Usage includes **Document Signing** (1.3.6.1.5.5.7.3.36)
+or **Non-Repudiation** (1.3.6.1.5.5.7.3.2).  Signing is performed
+in-process with `node-forge`.
 
-| Field                                | UBL 2.1 path                                | Purpose                                                       |
-| ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------- |
-| `deliveryDate`                       | `InvoicePeriod[0].StartDate`                | Goods / service delivery date (taxpoint).                      |
-| `paymentMeansCode` (e.g. `"03"`)     | `PaymentMeans[0].PaymentMeansCode`          | Mode of payment (01 Cash → 10 PayPal / Online).               |
-| `paymentAccountNo`                   | `PaymentMeans[0].PayeeFinancialAccount[0].ID` | Supplier bank account for direct credit / IBAN equivalents.   |
-| `additionalReferences[]`             | `AdditionalDocumentReference[]`              | FTT (tourism tax), withholding tax or other regulator refs.   |
-
-Example payload:
-
-```json
-{
-  "version": "1.1",
-  "format": "JSON",
-  "deliveryDate": "2025-01-20",
-  "paymentMeansCode": "03",
-  "paymentAccountNo": "1234567890",
-  "additionalReferences": [
-    { "id": "FTT-2025-001", "documentType": "FTT", "documentDescription": "Tourism tax reference" }
-  ]
-}
-```
-
-All four fields are optional. The mapper omits the corresponding UBL block when
-the value is absent so existing invoice flows are unaffected.
+For local development set `DISABLE_SIGNING=1` and the platform emits a
+placeholder signature.  The MyInvois SANDBOX will reject it, but the
+rest of the lifecycle (submission record, poll, cancel) is still
+exercised.
 
 ## Pre-submission validation
 
-Before every submission we run a 100% in-process UBL 2.1 v1.1 conformance
-check (`validateUblDocument` in
-`apps/api/src/modules/einvoice/validators/ubl.validator.ts`).  This lets the
-UI surface problems *before* the document is sent to MyInvois.
+`validateUblDocument()` is a conservative structural check that runs
+before the document is signed or sent to MyInvois.  This lets the UI
+surface problems *before* the document is sent to MyInvois.
 
 The validator checks for:
 
@@ -235,6 +203,8 @@ The validator checks for:
 - Every monetary total carries a `currencyID` attribute.
 - Supplier `PartyIdentification` + `PartyTaxScheme/CompanyID` is populated
   and schemeID is `TIN`.
+- Supplier TIN matches the LHDNM pattern (`^([A-Z]{1,2})?[0-9]{8,12}$`).
+- BRN (when used in `PartyIdentification`) is 9-12 digits.
 - Customer `PartyIdentification` has a value and recognised schemeID
   (`TIN`, `BRN`, `NRIC`, `PASSPORT`, `ARMY`).
 - IndustryClassificationCode (MSIC) is 5-digit numeric.
@@ -249,6 +219,9 @@ The validator checks for:
   `ID` and a digit-shape format check (`[0-9 -]{6,34}`).
 - `AdditionalDocumentReference[].ID` is required and must be unique
   within the document (duplicate IDs raise an error).
+- `TaxExchangeRate` is required when `DocumentCurrencyCode != MYR`;
+  when supplied, the rate is a positive plain-decimal number and the
+  target currency is always `MYR`.
 
 The validator returns a structured report:
 
@@ -283,7 +256,8 @@ results.
 
 ```
 1. POST /api/einvoice/invoices/:id/submit
-   - mapper builds UBL JSON
+   - mapper builds UBL JSON (with TaxExchangeRate)
+   - validator runs pre-submission checks
    - signer produces PKCS#7
    - client POSTs to /api/v1.0/documentsubmissions
    - EinvoiceSubmission row created with attempts=1

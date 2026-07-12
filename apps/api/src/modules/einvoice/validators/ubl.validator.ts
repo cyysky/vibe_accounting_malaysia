@@ -35,6 +35,7 @@ type TaxTypeCode = (typeof REQUIRED_TAX_TYPE_CODES)[number];
 const PAYMENT_MEANS_CODES = new Set(["01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","77","78","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","94","95","96","97","98","99"]);
 const isTaxTypeCode = (code: unknown): code is TaxTypeCode =>
   typeof code === 'string' && (REQUIRED_TAX_TYPE_CODES as readonly string[]).includes(code);
+const BRN_PATTERN = /^[0-9]{9,12}$/;
 const SAFE_ISSUE_CODES = {
   required: 'REQUIRED',
   format: 'FORMAT',
@@ -342,6 +343,7 @@ export function validateUblDocument(doc: UblDocument): UblValidationResult {
   }
   validatePaymentMeans(inner, issues);
   validateAdditionalDocumentReferences(inner, issues);
+  validateTaxExchangeRate(inner, issues);
   return finalize(issues, documentType, version, doc);
 }
 function validatePaymentMeans(inner: Record<string, unknown>, issues: UblValidationIssue[]) {
@@ -378,6 +380,72 @@ function validatePaymentMeans(inner: Record<string, unknown>, issues: UblValidat
           message: `PayeeFinancialAccount.ID "${accountId}" does not look like a bank account number`,
         });
       }
+    }
+  }
+}
+function validateTaxExchangeRate(inner: Record<string, unknown>, issues: UblValidationIssue[]) {
+  const codeNode = inner.DocumentCurrencyCode as Array<{ _?: string }> | undefined;
+  const currency = codeNode?.[0]?._;
+  const tx = inner.TaxExchangeRate as Array<Record<string, unknown>> | undefined;
+  // MyInvois requires TaxExchangeRate whenever the invoice currency is not MYR
+  // (release note 1 Aug 2025, effective Sandbox 9 Aug 2025 / Production 1 Sep 2025).
+  // For MYR invoices we still emit a 1.00 rate so this validator treats the field
+  // as optional in that case.
+  if (currency && currency !== 'MYR' && (!tx || tx.length === 0)) {
+    issues.push({
+      code: SAFE_ISSUE_CODES.required,
+      severity: 'error',
+      path: 'TaxExchangeRate',
+      message: 'TaxExchangeRate is required when DocumentCurrencyCode != MYR (MyInvois SDK release note 1 Aug 2025)',
+    });
+    return;
+  }
+  if (!tx || tx.length === 0) return;
+  for (const [i, node] of tx.entries()) {
+    const src = readText(node.SourceCurrencyCode as never);
+    const tgt = readText(node.TargetCurrencyCode as never);
+    const rate = readAmount(node.CalculationRate);
+    if (!rate || rate._ === undefined) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.required,
+        severity: 'error',
+        path: 'TaxExchangeRate[' + i + '].CalculationRate',
+        message: 'TaxExchangeRate/CalculationRate is required',
+      });
+      continue;
+    }
+    if (/[eE]/.test(rate._)) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.format,
+        severity: 'error',
+        path: 'TaxExchangeRate[' + i + '].CalculationRate',
+        message: 'CalculationRate must be in plain numeric format (scientific notation rejected by MyInvois, release note 30 Apr 2026)',
+      });
+    }
+    const rateNum = Number(rate._);
+    if (!Number.isFinite(rateNum) || rateNum <= 0) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.amount,
+        severity: 'error',
+        path: 'TaxExchangeRate[' + i + '].CalculationRate',
+        message: 'CalculationRate must be a positive number',
+      });
+    }
+    if (src && currency && src !== currency) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.enum,
+        severity: 'warning',
+        path: 'TaxExchangeRate[' + i + '].SourceCurrencyCode',
+        message: 'SourceCurrencyCode (' + src + ') should equal DocumentCurrencyCode (' + currency + ')',
+      });
+    }
+    if (tgt && tgt !== 'MYR') {
+      issues.push({
+        code: SAFE_ISSUE_CODES.enum,
+        severity: 'error',
+        path: 'TaxExchangeRate[' + i + '].TargetCurrencyCode',
+        message: 'TargetCurrencyCode must be MYR per MyInvois spec (got ' + tgt + ')',
+      });
     }
   }
 }
@@ -510,13 +578,27 @@ function validateParty(party: Record<string, unknown>, label: string, issues: Ub
         message: 'Supplier PartyTaxScheme/CompanyID schemeID is expected to be TIN',
       });
     }
-    // LHDNM TIN format: optional 1-2 letter prefix + 8-12 digits.
-    if (value && !/^[A-Z]{0,2}[0-9]{8,12}$/.test(value)) {
+    // LHDNM TIN format (SDK 1.0 release 12 June 2026 — TIN/BRN validation
+    // effective 1 Aug 2026): an optional 1-2 letter prefix (e.g. 'IG', 'EI')
+    // followed by 8-12 digits, OR a pure 8-12 digit string.
+    if (value && !/^([A-Z]{1,2})?[0-9]{8,12}$/.test(value)) {
       issues.push({
         code: SAFE_ISSUE_CODES.format,
-        severity: 'warning',
+        severity: 'error',
         path: 'Supplier/PartyTaxScheme/CompanyID',
-        message: 'Supplier TIN "' + value + '" does not match the LHDNM pattern',
+        message: 'Supplier TIN "' + value + '" does not match the LHDNM pattern (1-2 letter prefix optional + 8-12 digits)',
+      });
+    }
+  }
+  // PartyIdentification BRN format check (SDK 1.0 release 12 June 2026).
+  for (const id of ids ?? []) {
+    const innerId = firstWrapper(id.ID) as { _?: string; schemeID?: string } | undefined;
+    if (innerId?.schemeID === 'BRN' && innerId._ && !BRN_PATTERN.test(innerId._)) {
+      issues.push({
+        code: SAFE_ISSUE_CODES.format,
+        severity: 'error',
+        path: label + '/PartyIdentification (BRN)',
+        message: label + ' BRN "' + innerId._ + '" must be 9-12 digits per the MyInvois scheme',
       });
     }
   }

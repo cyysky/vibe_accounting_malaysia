@@ -49,7 +49,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: { ...baseCustomer, country: "SG" },
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co", country: "Malaysia" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co", country: "Malaysia" },
       taxCodes: new Map(),
       documentType: "invoice",
     });
@@ -64,7 +64,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map(),
       documentType: "self-billed-refund-note",
     });
@@ -76,7 +76,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map(),
       documentType: "refund-note",
     });
@@ -88,7 +88,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: { ...baseCustomer, state: "Selangor" },
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map(),
     });
     const inv = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
@@ -109,7 +109,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
         ],
       },
       customer: baseCustomer,
-      supplier: { tin: "IG123", brn: "BRN123", name: "Demo Co" },
+      supplier: { tin: "IG12345678", brn: "202005123456", name: "Demo Co" },
       taxCodes: new Map(),
     });
     const inv = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
@@ -153,7 +153,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: null, name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         deliveryDate: new Date("2025-01-20T00:00:00Z"),
@@ -167,7 +167,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: null, name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
       });
@@ -181,7 +181,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: null, name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         paymentMeansCode: "03",
@@ -195,7 +195,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: null, name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         paymentMeansCode: "03",
@@ -213,7 +213,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: null, name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         additionalReferences: [
@@ -235,7 +235,7 @@ describe("UBL mapper: MyInvois SDK compliance extras", () => {
       const doc = buildUblInvoice({
         invoice: { ...invoice, lines: [{ description: "x", quantity: 1, unitPrice: 1, discount: 0, taxAmount: 0, lineNo: 1, taxCodeId: null, taxCode: null, item: null }] },
         customer: baseCustomer,
-        supplier: { tin: "IG123", brn: null, name: "Demo Co" },
+        supplier: { tin: "IG12345678", brn: null, name: "Demo Co" },
         taxCodes: new Map(),
         version: "1.1",
         additionalReferences: [],

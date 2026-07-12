@@ -26,7 +26,7 @@ describe('UBL 2.1 v1.1 mapper', () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [{ description: 'Widget', quantity: 2, unitPrice: 50, discount: 0, taxAmount: 8, lineNo: 1, taxCodeId: 't1', taxCode: null, item: null }] },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map([['t1', { id: 't1', accountBookId: 'b1', code: 'SVAT-08', name: 'Sales 8%', rate: D(0.08), description: null, active: true, taxTypeCode: '01' }]]),
       version: '1.1',
     });
@@ -41,30 +41,20 @@ describe('UBL 2.1 v1.1 mapper', () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map(),
     });
     const customerParty = ((((doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0].AccountingCustomerParty as Array<Record<string, unknown>>)[0].Party as Array<Record<string, unknown>>)[0]);
     expect((customerParty.PartyIdentification as Array<{ ID: Array<{ _: string }> }>)[0].ID[0]._).toBe('C123');
   });
 
-  it('uses credit-note document type code 02', () => {
-    const doc = buildUblInvoice({
-      invoice: { ...invoice, lines: [] },
-      customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
-      taxCodes: new Map(),
-      documentType: 'credit-note',
-    });
-    const inv = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
-    expect((inv.InvoiceTypeCode as Array<{ _: string; listVersionID: string }>)[0]._).toBe('02');
-  });
+;
 
   it('uses self-billed-invoice document type code 11', () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map(),
       documentType: 'self-billed-invoice',
     });
@@ -76,7 +66,7 @@ describe('UBL 2.1 v1.1 mapper', () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [{ description: 'Widget', quantity: 1, unitPrice: 100, discount: 10, taxAmount: 0, lineNo: 1 }] },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map(),
     });
     const line = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0].InvoiceLine as Array<Record<string, unknown>>;
@@ -89,7 +79,7 @@ describe('UBL 2.1 v1.1 mapper', () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, currency: 'USD', lines: [] },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map(),
     });
     const inv = (doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0];
@@ -102,7 +92,7 @@ describe('UBL 2.1 v1.1 mapper', () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co', msic: '62010', email: 'ap@demo.test', phone: '+60 3-1234 5678' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co', msic: '62010', email: 'ap@demo.test', phone: '+60 3-1234 5678' },
       taxCodes: new Map(),
     });
     const supplier = ((((doc as { Invoice: Array<Record<string, unknown>> }).Invoice[0].AccountingSupplierParty as Array<Record<string, unknown>>)[0].Party as Array<Record<string, unknown>>)[0]);
@@ -127,7 +117,7 @@ describe('UBL 2.1 v1.1 mapper', () => {
     const doc = buildUblInvoice({
       invoice: { ...invoice, lines: [] },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map(),
       billingReferenceId: 'INV-00001',
     });
@@ -135,4 +125,61 @@ describe('UBL 2.1 v1.1 mapper', () => {
     const ref = (inv.BillingReference as Array<Record<string, unknown>>)[0];
     expect((ref.InvoiceDocumentReference as Array<{ ID: Array<{ _: string }> }>)[0].ID[0]._).toBe('INV-00001');
   });
+  it('uses credit-note document type code 02 and wraps in CreditNote envelope', () => {
+    const doc = buildUblInvoice({
+      invoice: { ...invoice, lines: [] },
+      customer: baseCustomer,
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
+      taxCodes: new Map(),
+      documentType: 'credit-note',
+    });
+    const wrapper = (doc as { CreditNote: Array<Record<string, unknown>> }).CreditNote;
+    expect(wrapper).toBeDefined();
+    expect(wrapper).toHaveLength(1);
+    expect((wrapper[0].InvoiceTypeCode as Array<{ _: string }>)[0]._).toBe('02');
+    expect((doc as Record<string, unknown>)._D).toBe('urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2');
+    expect((doc as { Invoice?: unknown }).Invoice).toBeUndefined();
+  });
+
+  it('uses debit-note document type code 03 and wraps in DebitNote envelope', () => {
+    const doc = buildUblInvoice({
+      invoice: { ...invoice, lines: [] },
+      customer: baseCustomer,
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
+      taxCodes: new Map(),
+      documentType: 'debit-note',
+    });
+    const wrapper = (doc as { DebitNote: Array<Record<string, unknown>> }).DebitNote;
+    expect(wrapper).toBeDefined();
+    expect(wrapper).toHaveLength(1);
+    expect((wrapper[0].InvoiceTypeCode as Array<{ _: string }>)[0]._).toBe('03');
+    expect((doc as Record<string, unknown>)._D).toBe('urn:oasis:names:specification:ubl:schema:xsd:DebitNote-2');
+  });
+
+  it('uses self-billed-credit-note code 12 and CreditNote envelope', () => {
+    const doc = buildUblInvoice({
+      invoice: { ...invoice, lines: [] },
+      customer: baseCustomer,
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
+      taxCodes: new Map(),
+      documentType: 'self-billed-credit-note',
+    });
+    const wrapper = (doc as { CreditNote: Array<Record<string, unknown>> }).CreditNote;
+    expect(wrapper).toBeDefined();
+    expect((wrapper[0].InvoiceTypeCode as Array<{ _: string }>)[0]._).toBe('12');
+  });
+
+  it('uses self-billed-debit-note code 13 and DebitNote envelope', () => {
+    const doc = buildUblInvoice({
+      invoice: { ...invoice, lines: [] },
+      customer: baseCustomer,
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
+      taxCodes: new Map(),
+      documentType: 'self-billed-debit-note',
+    });
+    const wrapper = (doc as { DebitNote: Array<Record<string, unknown>> }).DebitNote;
+    expect(wrapper).toBeDefined();
+    expect((wrapper[0].InvoiceTypeCode as Array<{ _: string }>)[0]._).toBe('13');
+  });
+
 });

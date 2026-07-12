@@ -74,8 +74,8 @@ describe('UBL pre-submission validator', () => {
       },
       customer: baseCustomer,
       supplier: {
-        tin: 'IG123',
-        brn: 'BRN123',
+        tin: 'IG12345678',
+        brn: '202005123456',
         name: 'Demo Co',
         msic: '62001',
       },
@@ -127,7 +127,7 @@ describe('UBL pre-submission validator', () => {
         ],
       },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map(),
       version: '1.1',
     });
@@ -159,7 +159,7 @@ describe('UBL pre-submission validator', () => {
         ],
       },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map(),
       version: '1.1',
     });
@@ -187,7 +187,7 @@ describe('UBL pre-submission validator', () => {
         ],
       },
       customer: baseCustomer,
-      supplier: { tin: 'IG123', brn: 'BRN123', name: 'Demo Co' },
+      supplier: { tin: 'IG12345678', brn: '202005123456', name: 'Demo Co' },
       taxCodes: new Map(),
       version: '1.1',
     });

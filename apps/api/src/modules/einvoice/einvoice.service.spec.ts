@@ -75,7 +75,7 @@ function makeSettings(env = EinvoiceEnvironment.SANDBOX): EinvoiceSettingsServic
     environment: env,
     clientId: 'env-client',
     clientSecret: 'env-secret',
-    taxpayerTin: 'IG000',
+    taxpayerTin: 'IG12345678',
     taxpayerBrn: undefined,
     taxpayerName: undefined,
     certPath: undefined,
@@ -142,7 +142,7 @@ const baseInvoice = (over = {}) => ({
   createdAt: new Date(),
   updatedAt: new Date(),
   lines: [{ description: "Widget", quantity: 2, unitPrice: 50, discount: 0, taxAmount: 8, lineNo: 1, taxCodeId: "t1", taxCode: null, item: null }],
-  customer: { id: "cust-1", accountBookId: "book-1", code: "C001", name: "Acme", email: "ap@acme.test", phone: null, taxId: "C123", brn: null, addressLine1: null, addressLine2: null, city: "KL", state: "Selangor", postalCode: "50000", country: "MY", currency: "MYR", creditLimit: D(0), outstanding: D(0), active: true, createdAt: new Date(), updatedAt: new Date() },
+  customer: { id: "cust-1", accountBookId: "book-1", code: "C001", name: "Acme", email: "ap@acme.test", phone: null, taxId: "C12345678", brn: "202005123456", addressLine1: null, addressLine2: null, city: "KL", state: "Selangor", postalCode: "50000", country: "MY", currency: "MYR", creditLimit: D(0), outstanding: D(0), active: true, createdAt: new Date(), updatedAt: new Date() },
   ...over,
 });
 
@@ -163,7 +163,7 @@ describe("EinvoiceService", () => {
       const { svc } = buildService(prisma);
       const out = await svc.upsertConfig("book-1", {
         environment: EinvoiceEnvironment.SANDBOX,
-        clientId: "x", clientSecret: "y", taxpayerTin: "IG123", active: true,
+        clientId: "x", clientSecret: "y", taxpayerTin: "IG12345678", active: true,
       } as never);
       expect(out).toEqual({ id: "c1" });
       expect(prisma.einvoiceConfig.upsert).toHaveBeenCalledTimes(1);
@@ -249,8 +249,8 @@ describe("EinvoiceService", () => {
       prisma.taxCode.findMany.mockResolvedValue([]);
       prisma.einvoiceConfig.findUnique.mockResolvedValue({
         id: "c1", accountBookId: "book-1", environment: EinvoiceEnvironment.SANDBOX,
-        clientId: "db-client", clientSecret: "db-secret", taxpayerTin: "DB-IG",
-        taxpayerBrn: "DB-BRN", taxpayerName: "DB Co", certPath: null, certPassphrase: null, active: true,
+        clientId: "db-client", clientSecret: "db-secret", taxpayerTin: "DB12345678",
+        taxpayerBrn: "202005123456", taxpayerName: "DB Co", certPath: null, certPassphrase: null, active: true,
       } as EinvoiceConfigRecord);
       prisma.einvoiceSubmission.create.mockResolvedValue({ id: "sub-1" });
       const client = makeClient();
@@ -259,7 +259,7 @@ describe("EinvoiceService", () => {
       await svc.submitInvoice("book-1", "inv-1", {});
       const cfg = (client.submitDocuments as jest.Mock).mock.calls[0][0];
       expect(cfg.clientId).toBe("db-client");
-      expect(cfg.taxpayerTin).toBe("DB-IG");
+      expect(cfg.taxpayerTin).toBe("DB12345678");
     });
 
     it("marks submission with error message when MyInvois throws", async () => {
@@ -396,9 +396,9 @@ describe("EinvoiceService", () => {
       const client = makeClient();
       (client.validateTaxpayerTIN as jest.Mock).mockResolvedValue({ valid: true });
       const { svc } = buildService(prisma, { client });
-      const out = await svc.validateTin("book-1", EinvoiceEnvironment.SANDBOX, "IG123", "BRN", "BRNVAL");
+      const out = await svc.validateTin("book-1", EinvoiceEnvironment.SANDBOX, "IG12345678", "BRN", "BRNVAL");
       expect(out).toEqual({ valid: true });
-      expect((client.validateTaxpayerTIN as jest.Mock).mock.calls[0]).toEqual([expect.anything(), "IG123", "BRN", "BRNVAL"]);
+      expect((client.validateTaxpayerTIN as jest.Mock).mock.calls[0]).toEqual([expect.anything(), "IG12345678", "BRN", "BRNVAL"]);
     });
 
     it("getRecentDocuments forwards pageNo/pageSize as strings", async () => {

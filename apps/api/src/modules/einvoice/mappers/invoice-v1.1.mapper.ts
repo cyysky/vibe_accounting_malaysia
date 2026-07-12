@@ -25,6 +25,10 @@ interface MapperLine {
 
 export interface MapperContext {
   invoice: CustomerInvoice & { lines: MapperLine[] };
+  /** Foreign-to-MYR exchange rate. Required by MyInvois when the invoice
+   *  currency is not MYR (SDK release note 1 Aug 2025 — effective Sandbox
+   *  9 Aug 2025 and Production 1 Sep 2025). Defaults to 1 for MYR invoices. */
+  exchangeRate?: number | null;
   customer: Customer;
   supplier: {
     tin: string;
@@ -73,6 +77,17 @@ const CURRENCY_DEFAULT = "MYR";
  * 11 Self-billed Invoice / 12 Self-billed Credit Note /
  * 13 Self-billed Debit Note / 14 Self-billed Refund Note
  */
+const ENVELOPE_NAME: Record<NonNullable<MapperContext["documentType"]>, string> = {
+  "invoice": "Invoice",
+  "credit-note": "CreditNote",
+  "debit-note": "DebitNote",
+  "refund-note": "Invoice", // Refund notes are submitted as Invoice with type 04 in MyInvois 1.1
+  "self-billed-invoice": "Invoice",
+  "self-billed-credit-note": "CreditNote",
+  "self-billed-debit-note": "DebitNote",
+  "self-billed-refund-note": "Invoice",
+};
+
 const DOCUMENT_TYPE_CODE: Record<NonNullable<MapperContext["documentType"]>, string> = {
   "invoice": "01",
   "credit-note": "02",
@@ -199,6 +214,7 @@ export function buildUblInvoice(ctx: MapperContext): UblDocument {
   const dt = ctx.documentType ?? "invoice";
   const code = DOCUMENT_TYPE_CODE[dt];
   const currency = ctx.invoice.currency || CURRENCY_DEFAULT;
+  const exchangeRate = ctx.exchangeRate ?? Number(ctx.invoice.exchangeRate ?? 1);
 
   if (!ctx.supplier.tin) {
     throw new Error("Supplier TIN is required for MyInvois submission");
@@ -213,6 +229,18 @@ export function buildUblInvoice(ctx: MapperContext): UblDocument {
     DocumentCurrencyCode: [{ _: currency }],
     TaxCurrencyCode: [{ _: currency }],
   };
+
+  // MyInvois requires TaxExchangeRate when the invoice currency is not MYR
+  // (release note 1 Aug 2025, effective Sandbox 9 Aug 2025 / Production 1 Sep 2025).
+  // For MYR invoices we still emit it with a 1.00 rate so callers do not have to branch,
+  // matching the SDK sample payloads for the Invoice v1.1 document.
+  document.TaxExchangeRate = [
+    {
+      SourceCurrencyCode: [{ _: currency }],
+      TargetCurrencyCode: [{ _: "MYR" }],
+      CalculationRate: [{ _: toString(exchangeRate, 6) }],
+    },
+  ];
 
   if (ctx.billingReferenceId) {
     (document as Record<string, unknown>).BillingReference = [
@@ -270,12 +298,14 @@ export function buildUblInvoice(ctx: MapperContext): UblDocument {
     },
   ];
 
+  const envelopeName = ENVELOPE_NAME[dt];
+  const namespace = `urn:oasis:names:specification:ubl:schema:xsd:${envelopeName}-2`;
   return {
-    _D: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
+    _D: namespace,
     _A: "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
     _B: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
-    Invoice: [document],
-  };
+    [envelopeName]: [document],
+  } as UblDocument;
 }
 
 function buildSupplier(s: MapperContext["supplier"]): UblDocument {
@@ -482,6 +512,22 @@ function groupTaxSubtotals(lines: MapperLine[], taxCodes: Map<string, TaxCode>, 
   });
 }
 
+//
+// MyInvois rejects scientific notation in any amount field (SDK release note
+// 30 April 2026). JavaScript default Number.prototype.toString() switches to
+// exponential form for very small or very large magnitudes, so we route every
+// numeric render through this helper which always produces a plain decimal string.
+//
 function toString(n: unknown, fractionDigits = 2): string {
-  return Number(n ?? 0).toFixed(fractionDigits);
+  const value = Number(n ?? 0);
+  if (!Number.isFinite(value)) {
+    throw new Error("Cannot format non-finite amount: " + n);
+  }
+  let s = value.toFixed(fractionDigits);
+  if (/[eE]/.test(s)) {
+    s = value.toFixed(20).replace(/0+$/, "").replace(/\.$/, "");
+  }
+  return s;
 }
+
+

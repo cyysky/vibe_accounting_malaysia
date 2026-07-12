@@ -192,12 +192,15 @@ export class ReportsService {
    * General Ledger listing for a date range. Returns per-account running
    * balances plus a per-account summary. Useful for the GL report page.
    */
-  async generalLedger(bookId: string, from?: string, to?: string) {
+  async generalLedger(bookId: string, from?: string, to?: string, account?: string) {
     const where: Record<string, unknown> = { accountBookId: bookId, status: "POSTED" };
     if (from || to) {
       where.date = {};
       if (from) (where.date as Record<string, Date>).gte = new Date(from);
       if (to) (where.date as Record<string, Date>).lte = new Date(to);
+    }
+    if (account) {
+      where.lines = { some: { account: { OR: [{ id: account }, { code: account }] } } };
     }
     const accounts = await this.prisma.account.findMany({
       where: { accountBookId: bookId },

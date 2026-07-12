@@ -63,3 +63,52 @@ describe('ReportsService.cashFlow', () => {
 // Stubs so the constructor doesn't explode.
 const glStub = {} as GlService;
 const dashboardStub = {} as DashboardService;
+
+
+describe('ReportsService.generalLedger', () => {
+  function makeSvc(journals: unknown[], accounts: unknown[]) {
+    const prisma: any = {
+      journalEntry: {
+        findMany: jest.fn().mockResolvedValue(journals),
+      },
+      account: {
+        findMany: jest.fn().mockResolvedValue(accounts),
+      },
+    };
+    return { svc: new ReportsService(prisma as never, glStub, dashboardStub), prisma };
+  }
+
+  const sampleJournals = [
+    {
+      id: 'j1', number: 'JV-0001', date: new Date('2025-01-15'),
+      status: 'POSTED', createdAt: new Date(), updatedAt: new Date(), description: 'Sale',
+      accountBookId: 'b1', postedAt: new Date(),
+      lines: [
+        { id: 'l1', journalId: 'j1', accountId: 'a1', description: null, debit: 100, credit: 0, account: { id: 'a1', code: '1100', name: 'Cash', type: 'ASSET' } as never },
+        { id: 'l2', journalId: 'j1', accountId: 'a2', description: null, debit: 0, credit: 100, account: { id: 'a2', code: '4000', name: 'Sales', type: 'REVENUE' } as never },
+      ],
+    },
+  ];
+  const sampleAccounts = [
+    { id: 'a1', code: '1100', name: 'Cash', type: 'ASSET' },
+    { id: 'a2', code: '4000', name: 'Sales', type: 'REVENUE' },
+  ];
+
+  it('applies account filter as a lines.some.account OR clause', async () => {
+    const { svc, prisma } = makeSvc(sampleJournals, sampleAccounts);
+    await svc.generalLedger('b1', '2025-01-01', '2025-01-31', '1100');
+    const call = prisma.journalEntry.findMany.mock.calls[0][0];
+    expect(call.where).toMatchObject({
+      accountBookId: 'b1',
+      status: 'POSTED',
+      lines: { some: { account: { OR: [{ id: '1100' }, { code: '1100' }] } } },
+    });
+  });
+
+  it('omits the lines filter when no account is provided', async () => {
+    const { svc, prisma } = makeSvc(sampleJournals, sampleAccounts);
+    await svc.generalLedger('b1', '2025-01-01', '2025-01-31');
+    const call = prisma.journalEntry.findMany.mock.calls[0][0];
+    expect(call.where.lines).toBeUndefined();
+  });
+});

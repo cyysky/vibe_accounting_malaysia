@@ -58,9 +58,10 @@ export class ReportsController {
     @CurrentUser() user: AuthUser,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('account') account?: string,
   ) {
     if (!user.accountBookId) throw new Error("User has no account book");
-    return this.svc.generalLedger(user.accountBookId, from, to);
+    return this.svc.generalLedger(user.accountBookId, from, to, account);
   }
 
   @Get('export/ar-aging.csv')
@@ -91,9 +92,10 @@ export class ReportsController {
     @Res() res: Response,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('account') account?: string,
   ) {
     if (!user.accountBookId) throw new Error("User has no account book");
-    const data = await this.svc.generalLedger(user.accountBookId, from, to);
+    const data = await this.svc.generalLedger(user.accountBookId, from, to, account);
     const out: string[] = ['account_code,account_name,date,journal_number,description,debit,credit,running_balance'];
     for (const ln of data.lines) {
       out.push([

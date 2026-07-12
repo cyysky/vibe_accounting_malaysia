@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, Wallet, Scale, AlertCircle, FileText, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
@@ -17,18 +18,23 @@ const monthStart = () => {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 };
 
-export default function ReportsPage() {
+function ReportsPageInner() {
   const pnl = useQuery({ queryKey: ["pnl"], queryFn: () => api.pnl() });
   const bs = useQuery({ queryKey: ["bs"], queryFn: () => api.balanceSheet() });
 
   const [arAsOf, setArAsOf] = useState(today());
   const [apAsOf, setApAsOf] = useState(today());
+  const searchParams = useSearchParams();
+  const accountFilter = searchParams.get('account') ?? '';
   const [glFrom, setGlFrom] = useState(monthStart());
   const [glTo, setGlTo] = useState(today());
 
   const arAging = useQuery({ queryKey: ["ar-aging", arAsOf], queryFn: () => api.arAging(arAsOf) });
   const apAging = useQuery({ queryKey: ["ap-aging", apAsOf], queryFn: () => api.apAging(apAsOf) });
-  const gl = useQuery({ queryKey: ["gl", glFrom, glTo], queryFn: () => api.generalLedger(glFrom, glTo) });
+  const gl = useQuery({
+    queryKey: ["gl", glFrom, glTo, accountFilter],
+    queryFn: () => api.generalLedger(glFrom, glTo, accountFilter || undefined),
+  });
 
   return (
     <div className="space-y-6">
@@ -48,7 +54,7 @@ export default function ReportsPage() {
           <Button variant="secondary" size="sm" onClick={() => api.exportCsv(`/reports/export/ap-aging.csv?asOf=${apAsOf}`)}>
             <Download className="h-3.5 w-3.5" /> AP CSV
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => api.exportCsv(`/reports/export/general-ledger.csv?from=${glFrom}&to=${glTo}`)}>
+          <Button variant="secondary" size="sm" onClick={() => api.exportCsv(`/reports/export/general-ledger.csv?from=${glFrom}&to=${glTo}${accountFilter ? `&account=${encodeURIComponent(accountFilter)}` : ''}`)}>
             <Download className="h-3.5 w-3.5" /> GL CSV
           </Button>
         </>
@@ -254,5 +260,14 @@ function AgingTable({
         </table>
       </div>
     </section>
+  );
+}
+
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ReportsPageInner />
+    </Suspense>
   );
 }

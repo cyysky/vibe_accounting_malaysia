@@ -814,8 +814,8 @@ class ApiClient {
   apAging(asOf?: string): Promise<{ asOf: string; rows: AgingRow[]; totals: AgingRow["buckets"] }> {
     return this.request('GET', '/reports/ap-aging', undefined, { asOf });
   }
-  generalLedger(from?: string, to?: string): Promise<{ from: string | null; to: string | null; lines: GLLine[]; accounts: GLSummary[] }> {
-    return this.request('GET', '/reports/general-ledger', undefined, { from, to });
+  generalLedger(from?: string, to?: string, account?: string): Promise<{ from: string | null; to: string | null; lines: GLLine[]; accounts: GLSummary[] }> {
+    return this.request('GET', '/reports/general-ledger', undefined, { from, to, account });
   }
 
   // --- Credit notes ---

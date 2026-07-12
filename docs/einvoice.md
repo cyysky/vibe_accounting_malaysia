@@ -243,6 +243,12 @@ The validator checks for:
   `TaxCategory/TaxSubtotal`.
 - Every `TaxCategory` declares a `TaxTypeCode` in the MyInvois
   enumeration (`01`-`06` or `E`); `E` requires a `TaxExemptionReason`.
+- `PaymentMeans[].PaymentMeansCode` is in the recommended list
+  (`01`-`99`) — out-of-range codes emit a warning. When a
+  `PayeeFinancialAccount` is supplied the validator enforces a non-empty
+  `ID` and a digit-shape format check (`[0-9 -]{6,34}`).
+- `AdditionalDocumentReference[].ID` is required and must be unique
+  within the document (duplicate IDs raise an error).
 
 The validator returns a structured report:
 

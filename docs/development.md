@@ -154,11 +154,27 @@ or via the helper script:
 docker compose -f infra\docker-compose.yml exec api npm test
 ```
 
-Covers:
+Current coverage: **24 Jest suites / 178 unit tests** (all passing).
 
-- `apps/api/src/modules/gl/gl.service.spec.ts` — journal balancing
-- `apps/api/src/modules/auth/auth.service.spec.ts` — login, password check
-- `apps/api/src/modules/einvoice/mappers/invoice-v1.1.mapper.spec.ts` — UBL shape
+Covers (every suite ships a .spec.ts next to the source it exercises):
+
+- `apps/api/src/modules/auth/auth.service.spec.ts` — login, password check, JWT round-trip
+- `apps/api/src/modules/account-books/account-books.service.spec.ts` — CRUD, name uniqueness
+- `apps/api/src/modules/gl/gl.service.spec.ts` + `posting.service.spec.ts` — journal balancing, posting
+- `apps/api/src/modules/ar/ar.service.spec.ts` + `ap/ap.service.spec.ts` — invoice / bill lifecycle, GL post
+- `apps/api/src/modules/sales/sales.service.spec.ts` + `purchase/purchase.service.spec.ts` — order lifecycle
+- `apps/api/src/modules/stock/stock.service.spec.ts` + `stock-movements.service.spec.ts` — items + movements
+- `apps/api/src/modules/bank-accounts/bank-accounts.service.spec.ts` — bank CRUD + reconciliation
+- `apps/api/src/modules/payments/payments.service.spec.ts` — customer + supplier payment application
+- `apps/api/src/modules/credit-notes/credit-notes.service.spec.ts` + `debit-notes.service.spec.ts`
+- `apps/api/src/modules/recurring/recurring.service.spec.ts` — template due-date generation
+- `apps/api/src/modules/reports/reports.service.spec.ts` — P&L, BS, aging, GL aggregation
+- `apps/api/src/modules/dashboard/dashboard.service.spec.ts` — KPI summary, search palette
+- `apps/api/src/modules/audit-log/audit-log.service.spec.ts` — list filters (entity/action/since) + CSV escape
+- `apps/api/src/modules/einvoice/einvoice.service.spec.ts` — submit / poll / cancel orchestration
+- `apps/api/src/modules/einvoice/clients/myinvois.client.spec.ts` — HTTP client against nock
+- `apps/api/src/modules/einvoice/mappers/invoice-v1.1.mapper.spec.ts` + `mappers.extras.spec.ts` — UBL shape + PaymentMeans/InvoicePeriod/AdditionalDocumentReference
+- `apps/api/src/modules/einvoice/validators/ubl.validator.spec.ts` + `validators.extras.spec.ts` — pre-submission validator + PaymentMeansCode / PayeeFinancialAccount / AdditionalDocumentReference rules
 
 ### API e2e tests
 

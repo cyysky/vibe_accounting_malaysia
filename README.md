@@ -72,6 +72,7 @@ front end, packaged as a self-contained Docker Compose stack.
   list re-renders.
 - **Skeleton loading** on the dashboard, journal detail, stock item detail,
   user detail and bank-reconciliation detail pages — avoids blank-screen flash.
+- **Aging drill-down** — clicking an AR/AP aging row on `/reports` deep-links to the filtered customer / supplier invoices list; the 90+ bucket opens the worst-overdue invoice detail.
 - **Deep linking** from list rows, audit log, search results, and dashboard
   cards into the matching detail page; the audit-log Activity section on every
   detail page links back to the originating user / entity.
@@ -90,11 +91,21 @@ exposes shortcut buttons back to the parent workflow:
 - **Sales orders** – `/sales/[id]` with shortcut to create invoice.
 - **Recurring templates** – `/recurring/[id]` with shortcut to run now, delete, and view upcoming due dates + activity.
 - **Purchase orders** – `/purchase/[id]` with shortcut to record bill.
+- **Books** – `/settings/books/[id]` shows currency, TIN/BRN, MSIC and quick counts of customers, suppliers, journals.
+- **Fiscal years** – `/settings/fiscal-years/[id]` shows start/end/days/status with close / re-open actions and quick links to journal, GL and trial balance scoped to the period.
+- **Tax codes** – `/settings/tax-codes/[id]` shows code, rate %, MyInvois taxTypeCode and description.
+- **Bank accounts** – `/settings/bank-accounts/[id]` shows bank details, opening balance and shortcuts to reconcile, GL and dashboard.
+- **Stock movements** – `/stock/movements/[id]` shows type, qty, unit cost, total and deep-links the underlying item.
 - **Dashboard** – the "Recent activity" feed links each entity name to its
   detail page using the `entityHref()` helper.
 
 Credit notes / debit notes / payments lists link their related invoice or
 bill numbers to the underlying document.
+
+The **Activity Log** page (`/audit-log`) supports combined `entity`,
+`action` (CREATE / UPDATE / DELETE / POST / SUBMIT / CANCEL / POLL / PAY)
+and `since` (date) filters with a one-click Clear button and matching CSV
+export.
 
 
 

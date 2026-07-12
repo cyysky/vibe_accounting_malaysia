@@ -156,6 +156,11 @@ shortcut buttons back to the parent workflow:
 | `/dashboard/journal`    | `/dashboard/journal/[id]`       | Reverse; lines + audit activity |
 | `/reports/bank-reconciliation` | `/reports/bank-reconciliation/[accountId]` | Editable statement balance, GL activity, deep-link to journal |
 | `/settings/users`       | `/settings/users/[id]`          | Edit name/role, activate/deactivate, remove (owner only) |
+| `/settings/books`       | `/settings/books/[id]`          | Currency, TIN/BRN, MSIC, customer/supplier/journal counts |
+| `/settings/fiscal-years`| `/settings/fiscal-years/[id]`  | Close / re-open, journal + GL + trial balance quick links |
+| `/settings/tax-codes`   | `/settings/tax-codes/[id]`     | Rate, type (MyInvois taxTypeCode), description, audit notes |
+| `/settings/bank-accounts` | `/settings/bank-accounts/[id]` | Bank details + reconcile / GL / dashboard shortcuts |
+| `/stock/movements`      | `/stock/movements/[id]`        | Type, qty, unit cost, total, related item deep-link |
 | `/receivables/customers/[id]` | (same)                       | Outstanding + tax + contact + audit activity    |
 | `/payables`            | `/payables/[id]`                 | Supplier payment, debit note                    |
 | `/payables/suppliers/[id]`    | (same)                       | Outstanding + tax + contact + audit activity    |
@@ -169,6 +174,16 @@ shortcut buttons back to the parent workflow:
   lists link the related invoice / bill number to its detail page.
 - The dashboard's "Recent activity" feed uses an `entityHref()` helper
   to route each entity name to its detail page based on entity type.
+
+## Cross-page drill-downs
+
+- The **AR / AP aging** tables on `/reports` link each row's customer /
+  supplier name to a filtered `/receivables?customerId=…` or
+  `/payables?supplierId=…` view, and the **90+ bucket** cell links to the
+  worst-overdue invoice so collections / payments jump straight in.
+- `/receivables` and `/payables` honor `?customerId` and `?supplierId`
+  query params with a brand-tinted "Filtered by …" banner and a one-click
+  "Clear filter" link.
 
 ## UI / UX primitives
 
@@ -189,7 +204,7 @@ shortcut buttons back to the parent workflow:
 
 ## Testing
 
-23 Jest test suites / 164 unit tests covering: GL (service + posting),
+24 Jest test suites / 178 unit tests covering: GL (service + posting),
 AR, AP, e-invoice mapper (basic + extras), UBL 2.1 validator (basic +
 extras), MyInvois HTTP client, recurring, stock, bank accounts, payments
 (customer + supplier), credit notes, debit notes, sales orders,

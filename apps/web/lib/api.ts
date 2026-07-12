@@ -908,6 +908,14 @@ class ApiClient {
   createStockReceive(itemId: string, quantity: number, unitCost: number, reference?: string, notes?: string): Promise<StockMovement> {
     return this.createStockMovement({ itemId, type: 'RECEIVE', quantity, unitCost, date: new Date().toISOString(), reference, notes });
   }
+
+  /** Hits the /health endpoint (no /api prefix, no auth). */
+  async health(): Promise<{ status: string; version: string; uptime: number }> {
+    const url = (API_URL.replace(/\/api$/, "")) + "/health";
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
+    return res.json();
+  }
 }
 export const api = new ApiClient();
 

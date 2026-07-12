@@ -49,6 +49,14 @@ export function Topbar() {
     setUser(api.getUser());
   }, []);
 
+  // API liveness probe — small dot in the topbar turns red on failure.
+  const healthQ = useQuery({
+    queryKey: ["topbar-health"],
+    queryFn: () => api.health(),
+    refetchInterval: 30_000,
+    retry: false,
+  });
+
   // Cmd/Ctrl-K shortcut
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -129,6 +137,18 @@ export function Topbar() {
     <header className="flex h-14 items-center justify-between border-b bg-white px-6">
       <div className="flex items-center gap-3">
         <span className="hidden md:inline text-sm text-slate-500">Vibe Accounting Malaysia</span>
+        {healthQ.data && (
+          <span
+            className={
+              "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium " +
+              (healthQ.isError ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700")
+            }
+            title={healthQ.isError ? "API unreachable" : "API OK — v" + (healthQ.data?.version ?? "?")}
+          >
+            <span className={"h-1.5 w-1.5 rounded-full " + (healthQ.isError ? "bg-rose-500" : "bg-emerald-500")} />
+            {healthQ.isError ? "Offline" : "Online"}
+          </span>
+        )}
       </div>
 
       <div className="relative flex-1 max-w-md" ref={searchRef}>

@@ -17,6 +17,7 @@ function makePrisma() {
     supplierPayment: { findMany: jest.fn() },
     einvoiceSubmission: { findMany: jest.fn() },
     account: { findMany: jest.fn() },
+    accountBook: { findUnique: jest.fn() },
   };
 }
 
@@ -72,7 +73,12 @@ describe('DashboardService', () => {
       { documentStatus: 2 },
       { documentStatus: null },
     ]);
-    prisma.account.findMany.mockResolvedValue([{ id: 'cash' }]);
+    // account.findMany is now called three times by summary(): once for the cash
+    // list and twice for the new topAccountsByType(REVENUE/EXPENSE) helper.
+    prisma.account.findMany
+      .mockResolvedValueOnce([{ id: 'cash' }]) // cash list
+      .mockResolvedValueOnce([])              // REVENUE topAccountsByType
+      .mockResolvedValueOnce([]);             // EXPENSE topAccountsByType
     const svc = new DashboardService(prisma as never);
     const out = await svc.summary('book-1');
     expect(out.arOutstanding).toBe(150);
@@ -106,7 +112,53 @@ describe('DashboardService', () => {
     expect(out.topItems).toEqual([{ itemId: 'i1', name: 'Low', onHand: 2, reorderLevel: 10 }]);
   });
 
-  describe('search', () => {
+  
+  it('summary surfaces the top 3 revenue and expense GL accounts', async () => {
+    const prisma = makePrisma();
+    // Baseline queries return empty arrays.
+    prisma.customer.findMany.mockResolvedValue([]);
+    prisma.supplier.findMany.mockResolvedValue([]);
+    prisma.item.findMany.mockResolvedValue([]);
+    prisma.customerInvoice.findMany.mockResolvedValue([]);
+    prisma.journalEntry.findMany.mockResolvedValue([]);
+    prisma.einvoiceSubmission.findMany.mockResolvedValue([]);
+    // account.findMany is called three times by summary(): cash list, REVENUE, EXPENSE.
+    prisma.account.findMany
+      .mockResolvedValueOnce([]) // cash list (empty)
+      .mockResolvedValueOnce([
+        { id: 'a1', code: '4000', name: 'Sales', type: 'REVENUE', active: true,
+          lines: [{ debit: 0, credit: 5000 }] },
+        { id: 'a2', code: '4100', name: 'Service', type: 'REVENUE', active: true,
+          lines: [{ debit: 0, credit: 3000 }] },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'a3', code: '5000', name: 'COGS', type: 'EXPENSE', active: true,
+          lines: [{ debit: 4000, credit: 0 }] },
+        { id: 'a4', code: '6000', name: 'Rent', type: 'EXPENSE', active: true,
+          lines: [{ debit: 2000, credit: 0 }] },
+      ]);
+    const svc = new DashboardService(prisma as never);
+    const out = await svc.summary('book-1');
+    expect(out.glTopRevenue[0]?.accountCode).toBe('4000');
+    expect(out.glTopExpense[0]?.accountCode).toBe('5000');
+  });
+
+  it('summary returns empty GL arrays when no accounts have activity', async () => {
+    const prisma = makePrisma();
+    prisma.customer.findMany.mockResolvedValue([]);
+    prisma.supplier.findMany.mockResolvedValue([]);
+    prisma.item.findMany.mockResolvedValue([]);
+    prisma.customerInvoice.findMany.mockResolvedValue([]);
+    prisma.journalEntry.findMany.mockResolvedValue([]);
+    prisma.einvoiceSubmission.findMany.mockResolvedValue([]);
+    prisma.account.findMany.mockResolvedValue([]);
+    const svc = new DashboardService(prisma as never);
+    const out = await svc.summary('book-1');
+    expect(out.glTopRevenue).toEqual([]);
+    expect(out.glTopExpense).toEqual([]);
+  });
+
+describe('search', () => {
     it('returns empty buckets for too-short queries', async () => {
       const prisma = makePrisma();
       const svc = new DashboardService(prisma as never);

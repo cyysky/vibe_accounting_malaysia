@@ -13,6 +13,8 @@ export interface DashboardSummary {
   recentInvoices: Array<{ id: string; number: string; customerName: string; total: number; date: string; status: string }>;
   einvoicePending: number;
   einvoiceValid: number;
+  glTopRevenue: Array<{ accountId: string; accountCode: string; name: string; balance: number }>;
+  glTopExpense: Array<{ accountId: string; accountCode: string; name: string; balance: number }>;
 }
 
 @Injectable()
@@ -33,6 +35,8 @@ export class DashboardService {
         recentInvoices: [],
         einvoicePending: 0,
         einvoiceValid: 0,
+        glTopRevenue: [],
+        glTopExpense: [],
       };
     }
 
@@ -102,6 +106,8 @@ export class DashboardService {
 
     const einvoicePending = einvoiceSubmissions.filter((s) => s.documentStatus === 1 || s.documentStatus == null).length;
     const einvoiceValid = einvoiceSubmissions.filter((s) => s.documentStatus === 2).length;
+    const glTopRevenue = await this.topAccountsByType(bookId, "REVENUE", 3);
+    const glTopExpense = await this.topAccountsByType(bookId, "EXPENSE", 3);
 
     return {
       cashPosition,
@@ -115,6 +121,8 @@ export class DashboardService {
       recentInvoices,
       einvoicePending,
       einvoiceValid,
+      glTopRevenue,
+      glTopExpense,
     };
   }
 
@@ -205,5 +213,41 @@ export class DashboardService {
       }),
     ]);
     return { customers, suppliers, items, invoices, bills, journals, creditNotes, debitNotes, salesOrders, purchaseOrders, bankAccounts, customerPayments, supplierPayments };
+  }
+
+  /**
+   * Top N accounts of a given type, ranked by absolute period balance
+   * (revenue uses credit-debit; expense uses debit-credit). Used by
+   * the dashboard 'Top revenue / Top expense' widget so users can
+   * spot unusual ledger activity at a glance.
+   */
+  private async topAccountsByType(bookId: string, type: "REVENUE" | "EXPENSE" | "ASSET" | "LIABILITY" | "EQUITY", take = 3) {
+    const accounts = await this.prisma.account.findMany({
+      where: { accountBookId: bookId, type, active: true },
+      include: {
+        lines: {
+          select: { debit: true, credit: true },
+        },
+      },
+      take: 200,
+    });
+    const sign = type === "REVENUE" || type === "LIABILITY" || type === "EQUITY" ? 1 : -1;
+    const ranked = accounts
+      .map((a) => {
+        let balance = 0;
+        for (const l of a.lines ?? []) {
+          balance += (Number(l.credit) - Number(l.debit)) * sign;
+        }
+        return {
+          accountId: a.id,
+          accountCode: a.code,
+          name: a.name,
+          balance,
+        };
+      })
+      .filter((a) => Math.abs(a.balance) > 0)
+      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+      .slice(0, take);
+    return ranked;
   }
 }

@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { api } from '../../../lib/api';
 import { Button } from '../../../components/ui/Button';
 import { PageHeader } from '../../../components/ui/PageHeader';
+import { useToast } from '../../../components/ui/Toast';
 import { StatusBadge } from '../../../components/ui/StatusBadge';
 
 const fmt = (n: number) => (n ?? 0).toLocaleString('en-MY', { style: 'currency', currency: 'MYR' });
@@ -51,6 +52,7 @@ export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const qc = useQueryClient();
+  const toast = useToast();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
@@ -71,6 +73,7 @@ export default function InvoiceDetailPage() {
       const anyErr = e as Error & { response?: { data?: { message?: string } } };
       setSubmitError(anyErr?.response?.data?.message ?? (anyErr as Error).message);
       setSubmitSuccess(null);
+      toast.error('Submission failed', anyErr?.response?.data?.message ?? (anyErr as Error).message);
     },
   });
   const validate = useMutation({
